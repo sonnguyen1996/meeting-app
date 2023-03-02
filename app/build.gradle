@@ -1,0 +1,83 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+
+android {
+    namespace 'com.example.demothesisfpteduvn'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.example.demothesisfpteduvn"
+        minSdk 24
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        viewBinding = true
+        dataBinding = true
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField("String", "AUTH_TOKEN", "\"" + localProperties['auth_token'] + "\"")
+            buildConfigField("String", "AUTH_URL", "\"" + localProperties['auth_url'] + "\"")
+
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            buildConfigField("String", "AUTH_TOKEN", "\"" + localProperties['auth_token'] + "\"")
+            buildConfigField("String", "AUTH_URL", "\"" + "\"")
+
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'org.tensorflow:tensorflow-lite:2.11.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
+    implementation "androidx.concurrent:concurrent-futures-ktx:1.1.0"
+    implementation 'androidx.camera:camera-lifecycle:1.2.1'
+    implementation 'androidx.databinding:databinding-runtime:7.4.1'
+    implementation 'androidx.navigation:navigation-runtime-ktx:2.5.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
+    implementation 'androidx.activity:activity-ktx:1.6.1'
+    implementation "androidx.fragment:fragment-ktx:1.5.5"
+    testImplementation 'junit:junit:4.13.2'
+
+    //live video sdk
+    implementation 'live.videosdk:rtc-android-sdk:0.1.13'
+    implementation 'com.amitshekhar.android:android-networking:1.0.2'
+    implementation 'com.nabinbhandari.android:permissions:3.8'
+
+    //Navigation libraries
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.5.3'
+    implementation 'androidx.navigation:navigation-runtime-ktx:2.5.3'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.5.3'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.5.3'
+
+    // Sub modules
+    implementation(project(":domain"))
+    implementation(project(":data"))
+
+}
