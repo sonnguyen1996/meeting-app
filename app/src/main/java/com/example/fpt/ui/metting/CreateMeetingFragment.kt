@@ -13,9 +13,9 @@ import live.videosdk.rtc.android.lib.PeerConnectionUtils
 import org.webrtc.*
 
 class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeetingBinding>() {
-    var isMicEnabled = true
+    private var isMicEnabled = true
 
-    var isWebcamEnabled = true
+    private var isWebcamEnabled = true
 
     private var videoTrack: VideoTrack? = null
 

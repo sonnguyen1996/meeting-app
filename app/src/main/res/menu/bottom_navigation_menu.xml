@@ -10,7 +10,7 @@
 
     <item
         android:id="@id/user_setting_nav_graph"
-        android:icon="@drawable/ic_bottom_video"
+        android:icon="@drawable/ic_bottom_setting"
         android:title="@string/bottom_nav_video_tab"
         app:showAsAction="ifRoom" />
 
