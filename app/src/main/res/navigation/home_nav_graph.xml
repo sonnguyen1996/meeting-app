@@ -7,5 +7,15 @@
     <fragment
         android:id="@+id/createMeetingFragment"
         android:name="com.example.fpt.ui.metting.CreateMeetingFragment"
-        android:label="CreateMeetingFragment" />
+        android:label="CreateMeetingFragment"
+        tools:layout="@layout/fragment_create_meeting">
+        <action
+            android:id="@+id/action_createMeetingFragment_to_meetingCallFragment"
+            app:destination="@id/meetingCallFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/meetingCallFragment"
+        android:name="com.example.fpt.ui.metting.MeetingCallFragment"
+        android:label="MeetingCallFragment"
+        tools:layout="@layout/fragment_meeting_call"/>
 </navigation>

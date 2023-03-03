@@ -35,7 +35,7 @@ abstract class BaseFragment<T : BaseViewModel, Y : ViewDataBinding> : Fragment()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this).get(provideViewModelClass())
+        viewModel = ViewModelProvider(this)[provideViewModelClass()]
     }
 
     override fun onCreateView(

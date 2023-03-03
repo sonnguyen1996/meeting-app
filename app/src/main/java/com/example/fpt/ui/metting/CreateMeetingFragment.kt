@@ -2,12 +2,13 @@ package com.example.fpt.ui.metting
 
 import android.content.res.ColorStateList
 import android.graphics.Color
-import androidx.appcompat.app.ActionBar
-import androidx.appcompat.widget.Toolbar
+import android.os.Bundle
+import android.widget.Toast
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentCreateMeetingBinding
 import com.example.fpt.ui.base.BaseFragment
+import com.example.fpt.ui.metting.ultils.Constant
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import live.videosdk.rtc.android.lib.PeerConnectionUtils
 import org.webrtc.*
@@ -34,11 +35,38 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
     }
 
     override fun initData() {
+        viewModel.getJoinRoomResponse().observe(
+            viewLifecycleOwner
+        ) { roomResponse ->
+            val roomBundle = Bundle()
+            roomBundle.putSerializable(Constant.BundleKey.MEETING_INFO, roomResponse)
+            navigate(R.id.action_createMeetingFragment_to_meetingCallFragment, roomBundle)
+        }
     }
 
     override fun initActions() {
         binding.btnMic.setOnClickListener { toggleMic() }
         binding.btnWebcam.setOnClickListener { toggleWebcam() }
+
+        binding.btnJoinMeeting.setOnClickListener {
+            val meetingId = binding.etMeetingId.text.toString().trim { it <= ' ' }
+            val pattern = Regex("\\w{4}-\\w{4}-\\w{4}")
+            if ("" == meetingId) {
+                Toast.makeText(
+                    context, "Please enter meeting ID",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else if (!pattern.matches(meetingId)) {
+                Toast.makeText(
+                    context, "Please enter valid meeting ID",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else if ("" == binding.etMeetingId.text.toString()) {
+                Toast.makeText(context, "Please Enter Name", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.joinMeetingRoom(meetingId)
+            }
+        }
     }
 
     private fun changeFloatingActionButtonLayout(btn: FloatingActionButton?, enabled: Boolean) {
@@ -138,14 +166,14 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
     override fun onDestroy() {
         binding.joiningView.removeTrack()
         binding.joiningView.releaseSurfaceViewRenderer()
-        closeCapturer()
+        closeCapture()
         super.onDestroy()
     }
 
     override fun onPause() {
         binding.joiningView.removeTrack()
         binding.joiningView.releaseSurfaceViewRenderer()
-        closeCapturer()
+        closeCapture()
         super.onPause()
     }
 
@@ -154,7 +182,7 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
         updateCameraView()
     }
 
-    private fun closeCapturer() {
+    private fun closeCapture() {
         if (videoCapturer != null) {
             try {
                 videoCapturer!!.stopCapture()
@@ -169,8 +197,8 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             videoSource = null
         }
         if (peerConnectionFactory != null) {
-            peerConnectionFactory!!.stopAecDump()
-            peerConnectionFactory!!.dispose()
+            peerConnectionFactory?.stopAecDump()
+            peerConnectionFactory?.dispose()
             peerConnectionFactory = null
         }
         PeerConnectionFactory.stopInternalTracingCapture()
