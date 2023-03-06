@@ -5,8 +5,8 @@ import java.io.Serializable
 
 open class MeetingInfo : Serializable {
     @SerializedName("meetingId")
-    val meetingId: String = ""
+    var meetingId: String = ""
 
     @SerializedName("localParticipantName")
-    val localParticipantName: String = ""
+    var localParticipantName: String = ""
 }

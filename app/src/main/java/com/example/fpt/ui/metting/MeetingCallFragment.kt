@@ -39,7 +39,9 @@ import live.videosdk.rtc.android.model.PubSubPublishOptions
 import org.json.JSONObject
 import org.webrtc.RendererCommon
 import org.webrtc.VideoTrack
+import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBinding>() {
@@ -71,34 +73,18 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private var meetingInfo: MeetingInfo? = null
 
+    private var runnable: Runnable? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (arguments != null) {
-            meetingInfo = arguments?.getSerializable(Constant.BundleKey.MEETING_INFO) as? MeetingInfo
-            Log.d("xxx","${meetingInfo?.meetingId},${meetingInfo?.localParticipantName}")
+            meetingInfo =
+                arguments?.getSerializable(Constant.BundleKey.MEETING_INFO) as? MeetingInfo
         }
     }
 
     override fun initView() {
-        VideoSDK.config(BuildConfig.AUTH_TOKEN)
-        val customTracks: MutableMap<String, CustomStreamTrack> = HashMap()
-
-        val videoCustomTrack = VideoSDK.createCameraVideoTrack(
-            "h720p_w960p",
-            "front",
-            CustomStreamTrack.VideoMode.TEXT,
-            context
-        )
-        customTracks["video"] = videoCustomTrack
-
-        val audioCustomTrack = VideoSDK.createAudioTrack("high_quality", context)
-        customTracks["mic"] = audioCustomTrack
-
-        meeting = VideoSDK.initMeeting(
-            baseContext, meetingInfo?.meetingId, meetingInfo?.localParticipantName,
-            micEnabled, webcamEnabled, null, customTracks
-        )
-        activity?.window?.decorView?.rootView?.let { HelperClass.showProgress(it) }
+        initMeeting()
 
         binding.txtMeetingId.text = meetingInfo?.meetingId
 
@@ -108,14 +94,49 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     }
 
+
     override fun initData() {
+        viewModel.getMeetingTime().observe(
+            viewLifecycleOwner
+        ) { sessionInfo ->
+            val startMeetingTime = sessionInfo?.data?.get(0)?.start
+            var startMeetingDate: Date? = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startMeetingDate = Date.from(Instant.parse(startMeetingTime))
+            }
+            val currentTime = Calendar.getInstance().time
+            val difference = currentTime.time - startMeetingDate?.time!!
+            Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
+        }
+    }
+
+    fun showMeetingTime() {
+        runnable = object : Runnable {
+            override fun run() {
+                val hours = meetingSeconds / 3600
+                val minutes = (meetingSeconds % 3600) / 60
+                val secs = meetingSeconds % 60
+
+                // Format the seconds into minutes,seconds.
+                val time = String.format(
+                    Locale.getDefault(),
+                    "%02d:%02d:%02d", hours,
+                    minutes, secs
+                )
+                binding.txtMeetingTime.text = time
+                meetingSeconds++
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.post(runnable!!)
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun initActions() {
+        meeting?.addEventListener(meetingEventListener)
+
         setActionListeners()
         setAudioDeviceListeners()
-        meeting?.addEventListener(meetingEventListener)
 
         binding.btnAudioSelection.setOnClickListener { showAudioInputDialog() }
         binding.btnStopScreenShare.setOnClickListener {
@@ -135,7 +156,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val participant = participantList[0]
             val popupwindow_obj: PopupWindow? = HelperClass().callStatsPopupDisplay(
                 participant,
-               binding.ivParticipantScreenShareNetwork,
+                binding.ivParticipantScreenShareNetwork,
                 baseContext,
                 true
             )
@@ -154,138 +175,35 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 true
             )
             popupwindow_obj!!.showAsDropDown(
-              binding.ivLocalScreenShareNetwork,
+                binding.ivLocalScreenShareNetwork,
                 -350,
                 -85
             )
         }
 
-//        onTouchListener = object : View.OnTouchListener {
-//            override fun onTouch(v: View, event: MotionEvent): Boolean {
-////                when (event.action and MotionEvent.ACTION_MASK) {
-////                    MotionEvent.ACTION_UP -> {
-////                        clickCount++
-////                        if (clickCount == 1) {
-////                            startTime = System.currentTimeMillis()
-////                        } else if (clickCount == 2) {
-////                            val duration = System.currentTimeMillis() - startTime
-////                            if (duration <= MAX_DURATION) {
-////                                if (fullScreen) {
-////                                    toolbar.visibility = View.VISIBLE
-////                                    run {
-////                                        var i = 0
-////                                        while (i < toolbar.childCount) {
-////                                            toolbar.getChildAt(i).visibility = View.VISIBLE
-////                                            i++
-////                                        }
-////                                    }
-////                                    val params = Toolbar.LayoutParams(
-////                                        ViewGroup.LayoutParams.WRAP_CONTENT,
-////                                        ViewGroup.LayoutParams.WRAP_CONTENT
-////                                    )
-////                                    params.setMargins(22, 10, 0, 0)
-////                                    findViewById<View>(live.videosdk.rtc.android.R.id.meetingLayout).layoutParams =
-////                                        params
-////                                    shareLayout!!.layoutParams = LinearLayout.LayoutParams(
-////                                        ViewGroup.LayoutParams.MATCH_PARENT,
-////                                        HelperClass().dpToPx(420, this@GroupCallActivity)
-////                                    )
-////                                    (findViewById<View>(live.videosdk.rtc.android.R.id.localScreenShareView) as LinearLayout).layoutParams =
-////                                        LinearLayout.LayoutParams(
-////                                            ViewGroup.LayoutParams.MATCH_PARENT,
-////                                            HelperClass().dpToPx(420, this@GroupCallActivity)
-////                                        )
-////                                    val toolbarAnimation = TranslateAnimation(
-////                                        0F,
-////                                        0F,
-////                                        0F,
-////                                        10F
-////                                    )
-////                                    toolbarAnimation.duration = 500
-////                                    toolbarAnimation.fillAfter = true
-////                                    toolbar.startAnimation(toolbarAnimation)
-////                                    val bottomAppBar =
-////                                        findViewById<BottomAppBar>(live.videosdk.rtc.android.R.id.bottomAppbar)
-////                                    bottomAppBar.visibility = View.VISIBLE
-////                                    var i = 0
-////                                    while (i < bottomAppBar.childCount) {
-////                                        bottomAppBar.getChildAt(i).visibility = View.VISIBLE
-////                                        i++
-////                                    }
-////                                    val animate = TranslateAnimation(
-////                                        0F,
-////                                        0F,
-////                                        findViewById<View>(live.videosdk.rtc.android.R.id.bottomAppbar).height
-////                                            .toFloat(),
-////                                        0F
-////                                    )
-////                                    animate.duration = 300
-////                                    animate.fillAfter = true
-////                                    findViewById<View>(live.videosdk.rtc.android.R.id.bottomAppbar).startAnimation(
-////                                        animate
-////                                    )
-////                                } else {
-////                                    toolbar.visibility = View.GONE
-////                                    run {
-////                                        var i = 0
-////                                        while (i < toolbar.childCount) {
-////                                            toolbar.getChildAt(i).visibility = View.GONE
-////                                            i++
-////                                        }
-////                                    }
-////                                    shareLayout!!.layoutParams = LinearLayout.LayoutParams(
-////                                        ViewGroup.LayoutParams.MATCH_PARENT,
-////                                        HelperClass().dpToPx(500, this@GroupCallActivity)
-////                                    )
-////                                    (findViewById<View>(live.videosdk.rtc.android.R.id.localScreenShareView) as LinearLayout).layoutParams =
-////                                        LinearLayout.LayoutParams(
-////                                            ViewGroup.LayoutParams.MATCH_PARENT,
-////                                            HelperClass().dpToPx(500, this@GroupCallActivity)
-////                                        )
-////                                    val toolbarAnimation = TranslateAnimation(
-////                                        0F,
-////                                        0F,
-////                                        0F,
-////                                        10F
-////                                    )
-////                                    toolbarAnimation.duration = 500
-////                                    toolbarAnimation.fillAfter = true
-////                                    toolbar.startAnimation(toolbarAnimation)
-////                                    val bottomAppBar =
-////                                        findViewById<BottomAppBar>(live.videosdk.rtc.android.R.id.bottomAppbar)
-////                                    bottomAppBar.visibility = View.GONE
-////                                    var i = 0
-////                                    while (i < bottomAppBar.childCount) {
-////                                        bottomAppBar.getChildAt(i).visibility = View.GONE
-////                                        i++
-////                                    }
-////                                    val animate = TranslateAnimation(
-////                                        0F,
-////                                        0F,
-////                                        0F,
-////                                        findViewById<View>(live.videosdk.rtc.android.R.id.bottomAppbar).height
-////                                            .toFloat()
-////                                    )
-////                                    animate.duration = 400
-////                                    animate.fillAfter = true
-////                                    findViewById<View>(live.videosdk.rtc.android.R.id.bottomAppbar).startAnimation(
-////                                        animate
-////                                    )
-////                                }
-////                                fullScreen = !fullScreen
-////                                clickCount = 0
-////                            } else {
-////                                clickCount = 1
-////                                startTime = System.currentTimeMillis()
-////                            }
-////
-////                        }
-////                    }
-////                }
-////                return true
-//            //}
-//        }
+    }
 
+    private fun initMeeting() {
+        VideoSDK.config(BuildConfig.AUTH_TOKEN)
+        val customTracks: MutableMap<String, CustomStreamTrack> = HashMap()
+
+        val videoCustomTrack = VideoSDK.createCameraVideoTrack(
+            "h720p_w960p",
+            "front",
+            CustomStreamTrack.VideoMode.TEXT,
+            context
+        )
+        customTracks["video"] = videoCustomTrack
+
+        val audioCustomTrack = VideoSDK.createAudioTrack("high_quality", context)
+        customTracks["mic"] = audioCustomTrack
+
+        meeting = VideoSDK.initMeeting(
+            baseContext, meetingInfo?.meetingId, meetingInfo?.localParticipantName,
+            micEnabled, webcamEnabled, null, customTracks
+        )
+        activity?.window?.decorView?.rootView?.let { HelperClass.showProgress(it) }
+        meeting?.join()
     }
 
     private fun setActionListeners() {
@@ -308,6 +226,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             }
         }
     }
+
     private fun showMoreOptionsDialog() {
         val participantSize = meeting!!.participants.size + 1
         val moreOptionsArrayList: ArrayList<MeetingMenuItem> = ArrayList<MeetingMenuItem>()
@@ -334,24 +253,27 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 )
             }
 
-        val start_recording = AppCompatResources.getDrawable(baseContext,R.drawable.ic_recording)?.let {
-            MeetingMenuItem(
-                "Start recording",
-                it
-            )
-        }
-        val stop_recording = AppCompatResources.getDrawable(baseContext, R.drawable.ic_recording)?.let {
-            MeetingMenuItem(
-                "Stop recording",
-                it
-            )
-        }
-        val participant_list = AppCompatResources.getDrawable(baseContext, R.drawable.ic_people)?.let {
-            MeetingMenuItem(
-                "Participants ($participantSize)",
-                it
-            )
-        }
+        val start_recording =
+            AppCompatResources.getDrawable(baseContext, R.drawable.ic_recording)?.let {
+                MeetingMenuItem(
+                    "Start recording",
+                    it
+                )
+            }
+        val stop_recording =
+            AppCompatResources.getDrawable(baseContext, R.drawable.ic_recording)?.let {
+                MeetingMenuItem(
+                    "Stop recording",
+                    it
+                )
+            }
+        val participant_list =
+            AppCompatResources.getDrawable(baseContext, R.drawable.ic_people)?.let {
+                MeetingMenuItem(
+                    "Participants ($participantSize)",
+                    it
+                )
+            }
         raised_hand?.let { moreOptionsArrayList.add(it) }
         if (localScreenShare) {
             stop_screen_share?.let { moreOptionsArrayList.add(it) }
@@ -405,7 +327,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
         alertDialog.window!!.attributes = layoutParams
         alertDialog.show()
-    }    private fun toggleRecording() {
+    }
+
+    private fun toggleRecording() {
         if (!recording) {
             recordingStatusSnackbar!!.show()
             meeting!!.startRecording(null)
@@ -413,35 +337,15 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             meeting!!.stopRecording()
         }
     }
+
     private fun openParticipantList() {
-//        val participantsListView: RecyclerView
-//        val close: ImageView
-//        bottomSheetDialog = BottomSheetDialog(baseContext)
-//        val v3 = LayoutInflater.from(baseContext)
-//            .inflate(
-//         R.layout.layout_participants_list_view, findViewById(
-//                    live.videosdk.rtc.android.R.id.layout_participants))
-//        bottomSheetDialog!!.setContentView(v3)
-//        participantsListView = v3.findViewById(live.videosdk.rtc.android.R.id.rvParticipantsLinearView)
-//        (v3.findViewById<View>(live.videosdk.rtc.android.R.id.participant_heading) as TextView).typeface =
-//            RobotoFont().getTypeFace(
-//                this@GroupCallActivity
-//            )
-//        close = v3.findViewById(live.videosdk.rtc.android.R.id.ic_close)
-//        participantsListView.minimumHeight = getWindowHeight()
-//        bottomSheetDialog!!.show()
-//        close.setOnClickListener { bottomSheetDialog!!.dismiss() }
-//        meeting!!.addEventListener(meetingEventListener)
-//        participants = getAllParticipants()
-//        participantsListView.layoutManager = LinearLayoutManager(applicationContext)
-//        participantsListView.adapter =
-//            ParticipantListAdapter(participants, meeting!!, this@GroupCallActivity)
-//        participantsListView.setHasFixedSize(true)
     }
 
     private fun raisedHand() {
         meeting!!.pubSub.publish("RAISE_HAND", "Raise Hand by Me", PubSubPublishOptions())
-    }    private fun toggleScreenSharing() {
+    }
+
+    private fun toggleScreenSharing() {
         if (!screenshareEnabled) {
             if (!localScreenShare) {
                 askPermissionForScreenShare()
@@ -455,6 +359,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             }
         }
     }
+
     private fun askPermissionForScreenShare() {
         val mediaProjectionManager = context?.applicationContext?.getSystemService(
             AppCompatActivity.MEDIA_PROJECTION_SERVICE
@@ -480,11 +385,12 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         activity?.windowManager?.defaultDisplay?.getMetrics(displayMetrics)
         return displayMetrics.widthPixels
     }
+
     private fun showLeaveOrEndDialog() {
         val optionsArrayList: ArrayList<MeetingMenuItem> = ArrayList<MeetingMenuItem>()
         val leaveMeeting =
-            context?.let {context ->
-                AppCompatResources.getDrawable(context, R.drawable.ic_leave)?.let {drawable->
+            context?.let { context ->
+                AppCompatResources.getDrawable(context, R.drawable.ic_leave)?.let { drawable ->
                     MeetingMenuItem(
                         "Leave",
                         "Only you will leave the call",
@@ -494,7 +400,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             }
         val endMeeting =
             context?.let {
-                AppCompatResources.getDrawable(it,R.drawable.ic_end_meeting)?.let {
+                AppCompatResources.getDrawable(it, R.drawable.ic_end_meeting)?.let {
                     MeetingMenuItem(
                         "End",
                         "End call for all the participants",
@@ -706,13 +612,13 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
         val arrayAdapter: ArrayAdapter<*> = AudioDeviceListAdapter(
             baseContext,
-          R.layout.audio_device_list_layout,
+            R.layout.audio_device_list_layout,
             audioDeviceList
         )
         val materialAlertDialogBuilder =
             MaterialAlertDialogBuilder(
                 baseContext,
-               R.style.AlertDialogCustom
+                R.style.AlertDialogCustom
             )
                 .setAdapter(arrayAdapter) { _: DialogInterface?, which: Int ->
                     var audioDevice: AppRTCAudioManager.AudioDevice? = null
@@ -759,12 +665,14 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private val meetingEventListener: MeetingEventListener = object : MeetingEventListener() {
         override fun onMeetingJoined() {
-//            if (meeting != null) {
-//                //hide progress when meetingJoined
-//                activity?.window?.decorView?.rootView?.let { HelperClass.hideProgress(it) }
-//                toggleMicIcon()
-//                toggleWebcamIcon()
-//                setLocalListeners()
+            if (meeting != null) {
+                //hide progress when meetingJoined
+                activity?.window?.decorView?.rootView?.let { HelperClass.hideProgress(it) }
+                toggleMicIcon()
+                toggleWebcamIcon()
+                setLocalListeners()
+                meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
+            }
 //                NetworkUtils(this@GroupCallActivity).fetchMeetingTime(
 //                    meeting!!.meetingId,
 //                    token,
@@ -828,57 +736,11 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //                // notify user of any new messages
 //                meeting!!.pubSub.subscribe("CHAT", chatListener)
 //
-//                //terminate meeting in 10 minutes
-//                Handler().postDelayed({
-//                    if (!isDestroyed) {
-//                        val alertDialog = MaterialAlertDialogBuilder(
-//                            this@GroupCallActivity,
-//                            live.videosdk.rtc.android.R.style.AlertDialogCustom
-//                        ).create()
-//                        alertDialog.setCanceledOnTouchOutside(false)
-//                        val inflater = this@GroupCallActivity.layoutInflater
-//                        val dialogView = inflater.inflate(
-//                            live.videosdk.rtc.android.R.layout.alert_dialog_layout,
-//                            null
-//                        )
-//                        alertDialog.setView(dialogView)
-//                        val title =
-//                            dialogView.findViewById<View>(live.videosdk.rtc.android.R.id.title) as TextView
-//                        title.text = "Meeting Left"
-//                        val message =
-//                            dialogView.findViewById<View>(live.videosdk.rtc.android.R.id.message) as TextView
-//                        message.text = "Demo app limits meeting to 10 Minutes"
-//                        val positiveButton =
-//                            dialogView.findViewById<Button>(R.id.positiveBtn)
-//                        positiveButton.text = "Ok"
-//                        positiveButton.setOnClickListener {
-//                            if (!isDestroyed) {
-//                                ParticipantState.destroy()
-//                                unSubscribeTopics()
-//                                meeting!!.leave()
-//                            }
-//                            alertDialog.dismiss()
-//                        }
-//                        val negativeButton =
-//                            dialogView.findViewById<Button>(R.id.negativeBtn)
-//                        negativeButton.visibility = View.GONE
-//                        alertDialog.show()
-//                    }
-//                }, 600000)
+//
 //            }
         }
 
         override fun onMeetingLeft() {
-//            handler.removeCallbacks(runnable!!)
-//            if (!isDestroyed) {
-//                val intents = Intent(this@GroupCallActivity, CreateOrJoinActivity::class.java)
-//                intents.addFlags(
-//                    Intent.FLAG_ACTIVITY_NEW_TASK
-//                            or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK
-//                )
-//                startActivity(intents)
-//                finish()
-//            }
         }
 
         override fun onPresenterChanged(participantId: String?) {
@@ -1190,6 +1052,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     override fun provideViewModelClass() = MeetingViewModel::class.java
 
-    override fun isNeedHideBottomBar() = true;
+    override fun isNeedHideBottomBar() = true
 
 }

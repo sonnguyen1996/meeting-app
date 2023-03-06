@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.*
 import android.os.*
+import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -79,6 +80,14 @@ class MainActivity : AppCompatActivity() {
             options,
             permissionHandler
         )
+    }
+
+    open fun hideBottomBar() {
+        viewBinding.bottomNavigationView.visibility = View.GONE
+    }
+
+    open fun showBottomBar() {
+        viewBinding.bottomNavigationView.visibility = View.VISIBLE
     }
 
     private val permissionHandler: PermissionHandler = object : PermissionHandler() {

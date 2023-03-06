@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.NavHostFragment
 import com.demo.domain.domain.entities.ErrorResult
+import com.example.fpt.MainActivity
 
 
 abstract class BaseFragment<T : BaseViewModel, Y : ViewDataBinding> : Fragment() {
@@ -44,6 +45,11 @@ abstract class BaseFragment<T : BaseViewModel, Y : ViewDataBinding> : Fragment()
         savedInstanceState: Bundle?
     ): View {
         binding = DataBindingUtil.inflate(inflater, provideLayoutId(), container, false)
+        if (isNeedHideBottomBar()) {
+            hideBottomBar()
+        } else {
+            showBottomBar()
+        }
         try {
             navController = NavHostFragment.findNavController(this)
         } catch (e: Exception) {
@@ -129,6 +135,19 @@ abstract class BaseFragment<T : BaseViewModel, Y : ViewDataBinding> : Fragment()
         }
     }
 
+    protected fun hideBottomBar() {
+        if (hostActivity is MainActivity) {
+            val mainActivity: MainActivity = hostActivity as MainActivity
+            mainActivity.hideBottomBar()
+        }
+    }
+
+    protected fun showBottomBar() {
+        if (hostActivity is MainActivity) {
+            val mainActivity: MainActivity = hostActivity as MainActivity
+            mainActivity.showBottomBar()
+        }
+    }
 
     override fun onResume() {
         super.onResume()

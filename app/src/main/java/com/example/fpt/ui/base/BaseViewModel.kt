@@ -32,15 +32,11 @@ open class BaseViewModel(application: Application) : AndroidViewModel(applicatio
         coroutineContext.cancel()
     }
 
-
-
     val apiErrorResponse: MutableLiveData<ErrorResult> =
         MutableLiveData()
 
     protected val apiFailResponse =
         MutableLiveData<Boolean>()
-
-
 
     suspend fun executeApi(requestFunction: suspend () -> Unit) {
         try {

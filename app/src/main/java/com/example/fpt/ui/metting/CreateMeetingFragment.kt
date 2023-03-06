@@ -3,8 +3,10 @@ package com.example.fpt.ui.metting
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import com.demo.domain.domain.entities.ErrorResult
+import com.demo.domain.domain.response.MeetingInfo
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentCreateMeetingBinding
 import com.example.fpt.ui.base.BaseFragment
@@ -39,8 +41,17 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             viewLifecycleOwner
         ) { roomResponse ->
             val roomBundle = Bundle()
-            roomBundle.putSerializable(Constant.BundleKey.MEETING_INFO, roomResponse)
+            var meetingInfo = MeetingInfo()
+            meetingInfo.meetingId = roomResponse.roomId
+            meetingInfo.localParticipantName = binding.etName.text.toString().trim()
+            roomBundle.putSerializable(Constant.BundleKey.MEETING_INFO, meetingInfo)
             navigate(R.id.action_createMeetingFragment_to_meetingCallFragment, roomBundle)
+        }
+
+        viewModel.apiErrorResponse.observe(
+            viewLifecycleOwner
+        ) {
+            Toast.makeText(baseContext, "Error Occurred", Toast.LENGTH_LONG)
         }
     }
 
@@ -119,12 +130,12 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             // create VideoCapturer
             videoCapturer = createCameraCapturer()
             videoSource = peerConnectionFactory!!.createVideoSource(videoCapturer!!.isScreencast)
-            videoCapturer!!.initialize(
+            videoCapturer?.initialize(
                 surfaceTextureHelper,
                 baseContext,
-                videoSource!!.capturerObserver
+                videoSource?.capturerObserver
             )
-            videoCapturer!!.startCapture(480, 640, 30)
+            videoCapturer?.startCapture(480, 640, 30)
 
             // create VideoTrack
             videoTrack = peerConnectionFactory!!.createVideoTrack("100", videoSource)
