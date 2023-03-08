@@ -1,4 +1,4 @@
-package mobiletv.datasource.network.provider
+package thesis.datasource.network.provider
 
 import com.demo.thesis.data.BuildConfig
 import java.util.concurrent.TimeUnit
@@ -12,11 +12,6 @@ class RetrofitService {
 
     companion object {
 
-
-        /**
-         * Valid instance of [okhttp3.OkHttpClient] for reuse across
-         * retrofit instances.
-         */
         private val httpClient = OkHttpClient.Builder()
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

@@ -1,4 +1,4 @@
-package mobiletv.repository.remote
+package thesis.repository.remote
 
 abstract class BaseRepository<T> {
 

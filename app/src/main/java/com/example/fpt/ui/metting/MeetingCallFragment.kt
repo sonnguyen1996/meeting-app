@@ -30,6 +30,7 @@ import live.videosdk.rtc.android.*
 import com.example.fpt.ui.adapter.AudioDeviceListAdapter
 import com.example.fpt.ui.adapter.LeaveOptionListAdapter
 import com.example.fpt.ui.adapter.MoreOptionsListAdapter
+import dagger.hilt.android.AndroidEntryPoint
 import live.videosdk.rtc.android.lib.AppRTCAudioManager
 import live.videosdk.rtc.android.listeners.MeetingEventListener
 import live.videosdk.rtc.android.listeners.MicRequestListener
@@ -44,6 +45,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
+@AndroidEntryPoint
 class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBinding>() {
     private var meeting: Meeting? = null
 
@@ -107,28 +109,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val currentTime = Calendar.getInstance().time
             val difference = currentTime.time - startMeetingDate?.time!!
             Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
+//
         }
-    }
 
-    fun showMeetingTime() {
-        runnable = object : Runnable {
-            override fun run() {
-                val hours = meetingSeconds / 3600
-                val minutes = (meetingSeconds % 3600) / 60
-                val secs = meetingSeconds % 60
-
-                // Format the seconds into minutes,seconds.
-                val time = String.format(
-                    Locale.getDefault(),
-                    "%02d:%02d:%02d", hours,
-                    minutes, secs
-                )
-                binding.txtMeetingTime.text = time
-                meetingSeconds++
-                handler.postDelayed(this, 1000)
-            }
-        }
-        handler.post(runnable!!)
     }
 
     @SuppressLint("ClickableViewAccessibility")

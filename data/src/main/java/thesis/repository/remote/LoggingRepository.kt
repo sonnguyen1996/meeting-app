@@ -1,10 +1,12 @@
-package mobiletv.repository.remote
+package thesis.repository.remote
 
 import com.demo.thesis.data.BuildConfig
-import mobiletv.datasource.network.APIHandlerBuilder
-import mobiletv.datasource.network.api.RemoteAPI
+import thesis.datasource.network.APIHandlerBuilder
+import thesis.datasource.network.api.RemoteAPI
+import javax.inject.Singleton
 
 
+@Singleton
 open class LoggingRepository : BaseRepository<RemoteAPI>() {
 
 

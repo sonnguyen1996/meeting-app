@@ -1,8 +1,8 @@
-package mobiletv.datasource.network
+package thesis.datasource.network
 
 import com.demo.thesis.data.BuildConfig
-import mobiletv.datasource.network.api.RemoteAPI
-import mobiletv.datasource.network.provider.RetrofitService
+import thesis.datasource.network.api.RemoteAPI
+import thesis.datasource.network.provider.RetrofitService
 import java.util.*
 
 class APIHandlerBuilder {

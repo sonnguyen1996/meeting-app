@@ -1,9 +1,8 @@
-package mobiletv.datasource.network.api
+package thesis.datasource.network.api
 
 import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 import retrofit2.http.GET
-import retrofit2.http.POST
 import retrofit2.http.Path
 
 

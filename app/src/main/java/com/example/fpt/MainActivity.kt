@@ -16,9 +16,10 @@ import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.ActivityMainBinding
 import com.nabinbhandari.android.permissions.PermissionHandler
 import com.nabinbhandari.android.permissions.Permissions
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
 
-
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private var navController: LiveData<NavController>? = null

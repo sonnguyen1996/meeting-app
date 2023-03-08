@@ -12,9 +12,11 @@ import com.example.demothesisfpteduvn.databinding.FragmentCreateMeetingBinding
 import com.example.fpt.ui.base.BaseFragment
 import com.example.fpt.ui.metting.ultils.Constant
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import dagger.hilt.android.AndroidEntryPoint
 import live.videosdk.rtc.android.lib.PeerConnectionUtils
 import org.webrtc.*
 
+@AndroidEntryPoint
 class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeetingBinding>() {
     private var isMicEnabled = true
 

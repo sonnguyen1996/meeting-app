@@ -51,4 +51,8 @@ open class BaseViewModel(application: Application) : AndroidViewModel(applicatio
         mainJob.cancel()
         heavyJob.cancel()
     }
+
+    open fun clearObserverTask() {
+        heavyJob.cancel()
+    }
 }

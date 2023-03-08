@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.NavHostFragment
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.fpt.MainActivity
 
@@ -122,6 +123,7 @@ abstract class BaseFragment<T : BaseViewModel, Y : ViewDataBinding> : Fragment()
     }
 
     protected open fun popBackStack() {
+
         if (navController != null) {
             val thisDestinationName = this.javaClass.name
             val currentDestination =
