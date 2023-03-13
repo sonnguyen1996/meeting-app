@@ -9,14 +9,9 @@ import javax.inject.Singleton
 
 @Singleton
 class MeetingRepository @Inject constructor(
-    val apiService: RemoteAPI,
+    private val apiService: RemoteAPI,
 ) : IMeetingRepository {
-    override fun jointMeeting(id: String): RoomResponse {
-        TODO("Not yet implemented")
-    }
-
-    override fun fetchMeetingTime(id: String): SessionResponse {
-        TODO("Not yet implemented")
-    }
+    override suspend fun jointMeeting(id: String) = apiService.joinMeeting(id)
+    override suspend fun fetchMeetingTime(id: String) = apiService.fetchMeetingTime(id)
 
 }

@@ -4,6 +4,6 @@ import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 
 interface IMeetingRepository {
-    fun jointMeeting(id: String): RoomResponse
-    fun fetchMeetingTime(id: String): SessionResponse
+    suspend fun jointMeeting(id: String): RoomResponse
+    suspend fun fetchMeetingTime(id: String): SessionResponse
 }

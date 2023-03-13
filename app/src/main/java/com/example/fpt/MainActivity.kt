@@ -26,8 +26,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var viewBinding: ActivityMainBinding
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
@@ -83,11 +81,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    open fun hideBottomBar() {
+    fun hideBottomBar() {
         viewBinding.bottomNavigationView.visibility = View.GONE
     }
 
-    open fun showBottomBar() {
+     fun showBottomBar() {
         viewBinding.bottomNavigationView.visibility = View.VISIBLE
     }
 

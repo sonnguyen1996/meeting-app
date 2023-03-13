@@ -1,15 +1,11 @@
 package com.example.fpt.ui.base
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import com.google.gson.Gson
+import androidx.lifecycle.ViewModel
 import com.demo.domain.domain.entities.ErrorResult
 import kotlinx.coroutines.*
-import java.util.LinkedHashMap
 
-open class BaseViewModel(application: Application) : AndroidViewModel(application) {
+open class BaseViewModel : ViewModel() {
 
     private var ioJob: Job = Job()
 

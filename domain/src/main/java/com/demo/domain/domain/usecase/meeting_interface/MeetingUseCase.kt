@@ -4,7 +4,7 @@ import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 
 
-interface IMeetingUseCase {
-    fun joinMeeting(meetingID: String):  RoomResponse
-    fun fetchMeetingTime(meetingID: String): SessionResponse
+interface MeetingUseCase {
+    suspend fun joinMeeting(meetingID: String): RoomResponse
+    suspend fun fetchMeetingTime(meetingID: String): SessionResponse
 }

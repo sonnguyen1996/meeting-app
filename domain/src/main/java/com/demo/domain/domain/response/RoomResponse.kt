@@ -27,4 +27,10 @@ open class RoomResponse : Serializable {
 
     @SerializedName("links")
     val links: LinkResponse? = null
+
+    @SerializedName("statusCode")
+    val statusCode: String? = null
+
+    @SerializedName("error")
+    val error: String? = null
 }

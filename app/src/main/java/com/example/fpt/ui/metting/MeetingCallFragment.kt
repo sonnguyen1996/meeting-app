@@ -108,10 +108,24 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             }
             val currentTime = Calendar.getInstance().time
             val difference = currentTime.time - startMeetingDate?.time!!
-            Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
-//
+            val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
+            viewModel.startObserver(initialValue)
         }
 
+
+        viewModel.updateTimeMeeting.observe(
+            viewLifecycleOwner
+        ) { meetingTime ->
+            binding.txtMeetingTime.text = meetingTime
+        }
+
+        viewModel.executeCaptureImage.observe(
+            viewLifecycleOwner
+        ) { isExecute ->
+            if (isExecute) {
+               binding.shareView.addFrameListener()
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
