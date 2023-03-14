@@ -5,32 +5,33 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.cardview.widget.CardView
-import androidx.fragment.app.Fragment
 import androidx.viewpager2.widget.ViewPager2
+import com.demo.domain.domain.entities.ErrorResult
+import com.example.demothesisfpteduvn.R
+import com.example.demothesisfpteduvn.databinding.FragmentParticipantViewBinding
+import com.example.fpt.ui.base.BaseFragment
+import com.example.fpt.ui.metting.listener.ParticipantChangeListener
+import com.example.fpt.ui.metting.listener.ParticipantStreamChangeListener
+import com.example.fpt.ui.metting.ultils.HelperClass
+import com.example.fpt.ui.metting.ultils.ParticipantState
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import live.videosdk.rtc.android.Meeting
 import live.videosdk.rtc.android.Participant
 import live.videosdk.rtc.android.Stream
 import live.videosdk.rtc.android.VideoView
-import live.videosdk.rtc.android.kotlin.Common.Listener.ParticipantStreamChangeListener
-import live.videosdk.rtc.android.kotlin.Common.Utils.HelperClass
-import live.videosdk.rtc.android.kotlin.GroupCall.Activity.GroupCallActivity
-import live.videosdk.rtc.android.kotlin.GroupCall.Listener.ParticipantChangeListener
-import live.videosdk.rtc.android.kotlin.GroupCall.Utils.ParticipantState
-import live.videosdk.rtc.android.kotlin.R
 import live.videosdk.rtc.android.listeners.ParticipantEventListener
 import org.webrtc.VideoTrack
 import java.util.concurrent.ConcurrentHashMap
 
 
-class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragment() {
+class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
+    BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
     var participantGridLayout: GridLayout? = null
     var participantChangeListener: ParticipantChangeListener? = null
     var participantState: ParticipantState? = null
@@ -43,22 +44,10 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragme
     private var participantsInGrid: MutableMap<String, Participant>? = null
     private val participantsView: MutableMap<String, View> = HashMap()
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        // Inflate the layout for this fragment
-        val view: View = inflater.inflate(R.layout.fragment_participant_view, container, false)
-        participantGridLayout = view.findViewById(R.id.participantGridLayout)
-        viewPager2 = requireActivity().findViewById(R.id.view_pager_video_grid)
-        tabLayout = requireActivity().findViewById(R.id.tab_layout_dots)
-        return view
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        participantGridLayout!!.setOnTouchListener((activity as GroupCallActivity?)!!.getTouchListener())
+        participantGridLayout?.setOnTouchListener(hostActivity)
         participantChangeListener = object : ParticipantChangeListener {
             override fun onChangeParticipant(participantList: List<List<Participant?>?>?) {
                 changeLayout(participantList!!, null)
@@ -78,8 +67,8 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragme
                 )
             }
         }
-        participantState = ParticipantState.getInstance(meeting!!)
-        participantState!!.addParticipantChangeListener(participantChangeListener!!)
+        participantState = meeting?.let { ParticipantState.getInstance(it) }
+        participantState?.addParticipantChangeListener(participantChangeListener as ParticipantChangeListener)
     }
 
     private fun changeLayout(
@@ -127,6 +116,28 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragme
         super.onResume()
     }
 
+    override fun isNeedHideBottomBar() = true
+
+    override fun provideLayoutId(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun onRequestError(errorResponse: ErrorResult) {
+    }
+
+    override fun provideViewModelClass() = MeetingViewModel::class.java
+
+    override fun initActions() {
+    }
+
+    override fun initData() {
+    }
+
+    override fun initView() {
+        viewPager2 = requireActivity().findViewById(R.id.view_pager_video_grid)
+        tabLayout = requireActivity().findViewById(R.id.tab_layout_dots)
+    }
+
     override fun onPause() {
         if (position < participantListArr!!.size) {
             var otherParticipants: List<Participant> = ArrayList()
@@ -157,11 +168,11 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragme
             val participant = participants!![i]
             if (participantsInGrid != null) {
                 for ((_, key) in participantsInGrid!!) {
-                if (!participants!!.contains(key)) {
+                    if (!participants!!.contains(key)) {
                         participantsInGrid!!.remove(key.id)
                         val participantVideoView =
                             participantsView[key.id]!!.findViewById<VideoView>(R.id.participantVideoView)
-                    participantVideoView.releaseSurfaceViewRenderer()
+                        participantVideoView.releaseSurfaceViewRenderer()
                         participantGridLayout!!.removeView(participantsView[key.id])
                         participantsView.remove(key.id)
                         updateGridLayout(false)
@@ -183,7 +194,8 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) : Fragme
 //                ivMicStatus.setVisibility(View.VISIBLE);
                 } else {
                     if (participant.id == activeSpeaker.id) {
-                        participantCard.foreground = requireContext().getDrawable(R.drawable.layout_bg)
+                        participantCard.foreground =
+                            requireContext().getDrawable(R.drawable.layout_bg)
                         //                    ivMicStatus.setVisibility(View.GONE);
 //                    img_participantActiveSpeaker.setVisibility(View.VISIBLE);
                     } else {
