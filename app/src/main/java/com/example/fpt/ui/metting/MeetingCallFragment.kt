@@ -7,7 +7,6 @@ import android.graphics.drawable.ColorDrawable
 import android.media.projection.MediaProjectionManager
 import android.os.*
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +29,7 @@ import live.videosdk.rtc.android.*
 import com.example.fpt.ui.adapter.AudioDeviceListAdapter
 import com.example.fpt.ui.adapter.LeaveOptionListAdapter
 import com.example.fpt.ui.adapter.MoreOptionsListAdapter
+import com.example.fpt.ui.adapter.ParticipantViewAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import live.videosdk.rtc.android.lib.AppRTCAudioManager
 import live.videosdk.rtc.android.listeners.MeetingEventListener
@@ -43,6 +43,7 @@ import org.webrtc.VideoTrack
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 import kotlin.math.roundToInt
 
 @AndroidEntryPoint
@@ -59,8 +60,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private var recordingStatusSnackbar: Snackbar? = null
 
-    private val handler: Looper = Looper.getMainLooper()
-
     private var screenshareEnabled = false
 
     private var screenShareParticipantNameSnackbar: Snackbar? = null
@@ -71,11 +70,11 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private var bottomSheetDialog: BottomSheetDialog? = null
 
+    private var viewAdapter: ParticipantViewAdapter? = null
+
     private val CAPTURE_PERMISSION_REQUEST_CODE = 1
 
     private var meetingInfo: MeetingInfo? = null
-
-    private var runnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +86,12 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     override fun initView() {
         initMeeting()
+        viewAdapter = meeting?.let {
+            ParticipantViewAdapter(
+                childFragmentManager,
+                lifecycle, it
+            )
+        }
 
         binding.txtMeetingId.text = meetingInfo?.meetingId
 
@@ -107,7 +112,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 startMeetingDate = Date.from(Instant.parse(startMeetingTime))
             }
             val currentTime = Calendar.getInstance().time
-            val difference = currentTime.time - startMeetingDate?.time!!
+            val startTime = startMeetingDate?.time ?: 0
+            val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
             viewModel.startObserver(initialValue)
         }
@@ -123,7 +129,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             viewLifecycleOwner
         ) { isExecute ->
             if (isExecute) {
-               binding.shareView.addFrameListener()
+//               binding.shareView.addFrameListener()
             }
         }
     }
@@ -138,7 +144,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         binding.btnAudioSelection.setOnClickListener { showAudioInputDialog() }
         binding.btnStopScreenShare.setOnClickListener {
             if (localScreenShare) {
-                meeting!!.disableScreenShare()
+                meeting?.disableScreenShare()
             }
         }
         recordingStatusSnackbar = Snackbar.make(
@@ -157,7 +163,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 baseContext,
                 true
             )
-            popupwindow_obj!!.showAsDropDown(
+            popupwindow_obj?.showAsDropDown(
                 binding.ivParticipantScreenShareNetwork,
                 -350,
                 -85
@@ -165,13 +171,15 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         binding.ivLocalScreenShareNetwork.setOnClickListener {
-            val popupwindow_obj: PopupWindow? = HelperClass().callStatsPopupDisplay(
-                meeting!!.localParticipant,
-                binding.ivLocalScreenShareNetwork,
-                baseContext,
-                true
-            )
-            popupwindow_obj!!.showAsDropDown(
+            val popupObj: PopupWindow? = meeting?.localParticipant?.let { participant ->
+                HelperClass().callStatsPopupDisplay(
+                    participant,
+                    binding.ivLocalScreenShareNetwork,
+                    baseContext,
+                    true
+                )
+            }
+            popupObj?.showAsDropDown(
                 binding.ivLocalScreenShareNetwork,
                 -350,
                 -85
@@ -225,16 +233,16 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun showMoreOptionsDialog() {
-        val participantSize = meeting!!.participants.size + 1
+        val participantSize = meeting?.participants?.size?.plus(1)
         val moreOptionsArrayList: ArrayList<MeetingMenuItem> = ArrayList<MeetingMenuItem>()
-        val raised_hand = AppCompatResources.getDrawable(baseContext, R.drawable.raise_hand)?.let {
+        val raisedHand = AppCompatResources.getDrawable(baseContext, R.drawable.raise_hand)?.let {
             MeetingMenuItem(
                 "Raise Hand",
                 it
             )
         }
 
-        val start_screen_share =
+        val startScreenShare =
             AppCompatResources.getDrawable(baseContext, R.drawable.ic_screen_share)?.let {
                 MeetingMenuItem(
                     "Share screen",
@@ -242,7 +250,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 )
             }
 
-        val stop_screen_share =
+        val stopScreenShare =
             AppCompatResources.getDrawable(baseContext, R.drawable.ic_screen_share)?.let {
                 MeetingMenuItem(
                     "Stop screen share",
@@ -250,39 +258,39 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 )
             }
 
-        val start_recording =
+        val startRecording =
             AppCompatResources.getDrawable(baseContext, R.drawable.ic_recording)?.let {
                 MeetingMenuItem(
                     "Start recording",
                     it
                 )
             }
-        val stop_recording =
+        val stopRecording =
             AppCompatResources.getDrawable(baseContext, R.drawable.ic_recording)?.let {
                 MeetingMenuItem(
                     "Stop recording",
                     it
                 )
             }
-        val participant_list =
+        val participantList =
             AppCompatResources.getDrawable(baseContext, R.drawable.ic_people)?.let {
                 MeetingMenuItem(
                     "Participants ($participantSize)",
                     it
                 )
             }
-        raised_hand?.let { moreOptionsArrayList.add(it) }
+        raisedHand?.let { moreOptionsArrayList.add(it) }
         if (localScreenShare) {
-            stop_screen_share?.let { moreOptionsArrayList.add(it) }
+            stopScreenShare?.let { moreOptionsArrayList.add(it) }
         } else {
-            start_screen_share?.let { moreOptionsArrayList.add(it) }
+            startScreenShare?.let { moreOptionsArrayList.add(it) }
         }
         if (recording) {
-            stop_recording?.let { moreOptionsArrayList.add(it) }
+            startRecording?.let { moreOptionsArrayList.add(it) }
         } else {
-            start_recording?.let { moreOptionsArrayList.add(it) }
+            startRecording?.let { moreOptionsArrayList.add(it) }
         }
-        participant_list?.let { moreOptionsArrayList.add(it) }
+        participantList?.let { moreOptionsArrayList.add(it) }
         val arrayAdapter: ArrayAdapter<*> = MoreOptionsListAdapter(
             baseContext,
             R.layout.more_options_list_layout,
@@ -316,22 +324,22 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         listView.setFooterDividersEnabled(false)
         listView.addFooterView(View(context))
         listView.dividerHeight = 2
-        val wmlp = alertDialog.window!!.attributes
-        wmlp.gravity = Gravity.BOTTOM or Gravity.END
+        val wmlp = alertDialog.window?.attributes
+        wmlp?.gravity = Gravity.BOTTOM or Gravity.END
         val layoutParams = WindowManager.LayoutParams()
-        layoutParams.copyFrom(alertDialog.window!!.attributes)
+        layoutParams.copyFrom(alertDialog.window?.attributes)
         layoutParams.width = (getWindowWidth() * 0.8).roundToInt().toInt()
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-        alertDialog.window!!.attributes = layoutParams
+        alertDialog.window?.attributes = layoutParams
         alertDialog.show()
     }
 
     private fun toggleRecording() {
         if (!recording) {
-            recordingStatusSnackbar!!.show()
-            meeting!!.startRecording(null)
+            recordingStatusSnackbar?.show()
+            meeting?.startRecording(null)
         } else {
-            meeting!!.stopRecording()
+            meeting?.stopRecording()
         }
     }
 
@@ -339,7 +347,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun raisedHand() {
-        meeting!!.pubSub.publish("RAISE_HAND", "Raise Hand by Me", PubSubPublishOptions())
+        meeting?.pubSub?.publish("RAISE_HAND", "Raise Hand by Me", PubSubPublishOptions())
     }
 
     private fun toggleScreenSharing() {
@@ -350,7 +358,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             localScreenShare = !localScreenShare
         } else {
             if (localScreenShare) {
-                meeting!!.disableScreenShare()
+                meeting?.disableScreenShare()
             } else {
                 Toast.makeText(context, "You can't share your screen", Toast.LENGTH_SHORT).show()
             }
@@ -367,13 +375,17 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun getAllParticipants(): ArrayList<Participant> {
-        val participantList: ArrayList<Participant> = ArrayList<Participant>()
-        val participants: Iterator<Participant> = meeting!!.participants.values.iterator()
-        for (i in 0 until meeting!!.participants.size) {
-            val participant = participants.next()
-            participantList.add(participant)
+        return if (meeting != null) {
+            val participantList: ArrayList<Participant> = ArrayList()
+            val participants: Iterator<Participant> = meeting?.participants?.values?.iterator()!!
+            for (i in 0 until meeting!!.participants.size) {
+                val participant = participants.next()
+                participantList.add(participant)
+            }
+            participantList
+        } else {
+            ArrayList()
         }
-        return participantList
     }
 
     private fun getWindowWidth(): Int {
@@ -406,8 +418,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 }
             }
 
-        optionsArrayList.add(leaveMeeting!!)
-        optionsArrayList.add(endMeeting!!)
+        leaveMeeting?.let { optionsArrayList.add(it) }
+        endMeeting?.let { optionsArrayList.add(it) }
         val arrayAdapter: ArrayAdapter<*> = LeaveOptionListAdapter(
             baseContext,
             R.layout.leave_options_list_layout,
@@ -420,16 +432,16 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 ) { _: DialogInterface?, which: Int ->
                     when (which) {
 //                        0 -> {
-//                            viewPager2!!.adapter = null
+//                            viewPager2?.adapter = null
 //                            ParticipantState.destroy()
 //                            unSubscribeTopics()
-//                            meeting!!.leave()
+//                            meeting?.leave()
 //                        }
 //                        1 -> {
-//                            viewPager2!!.adapter = null
+//                            viewPager2?.adapter = null
 //                            ParticipantState.destroy()
 //                            unSubscribeTopics()
-//                            meeting!!.end()
+//                            meeting?.end()
 //                        }
                     }
                 }
@@ -440,13 +452,13 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         listView.setFooterDividersEnabled(false)
         listView.addFooterView(View(baseContext))
         listView.dividerHeight = 2
-        val wmlp = alertDialog.window!!.attributes
-        wmlp.gravity = Gravity.BOTTOM or Gravity.END
+        val wmlp = alertDialog.window?.attributes
+        wmlp?.gravity = Gravity.BOTTOM or Gravity.END
         val layoutParams = WindowManager.LayoutParams()
-        layoutParams.copyFrom(alertDialog.window!!.attributes)
+        layoutParams.copyFrom(alertDialog.window?.attributes)
         layoutParams.width = (getWindowWidth() * 0.8).roundToInt()
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-        alertDialog.window!!.attributes = layoutParams
+        alertDialog.window?.attributes = layoutParams
         alertDialog.show()
     }
 
@@ -459,7 +471,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //               R.layout.activity_chat,
 //                findViewById(live.videosdk.rtc.android.R.id.layout_chat)
 //            )
-//        bottomSheetDialog!!.setContentView(v3)
+//        bottomSheetDialog?.setContentView(v3)
 //        messageRcv = v3.findViewById(live.videosdk.rtc.android.R.id.messageRcv)
 //        messageRcv.layoutManager = LinearLayoutManager(applicationContext)
 //        val lp = RelativeLayout.LayoutParams(
@@ -490,9 +502,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //
 //                override fun onSlide(bottomSheet: View, slideOffset: Float) {}
 //            }
-//        bottomSheetDialog!!.behavior.addBottomSheetCallback(mBottomSheetCallback)
+//        bottomSheetDialog?.behavior.addBottomSheetCallback(mBottomSheetCallback)
 //        etmessage = v3.findViewById(live.videosdk.rtc.android.R.id.etMessage)
-//        etmessage!!.setOnTouchListener { view, event ->
+//        etmessage?.setOnTouchListener { view, event ->
 //            if (view.id == live.videosdk.rtc.android.R.id.etMessage) {
 //                view.parent.requestDisallowInterceptTouchEvent(true)
 //                when (event.action and MotionEvent.ACTION_MASK) {
@@ -503,17 +515,17 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //        }
 //        val btnSend = v3.findViewById<ImageButton>(live.videosdk.rtc.android.R.id.btnSend)
 //        btnSend.isEnabled = false
-//        etmessage!!.onFocusChangeListener = OnFocusChangeListener { _, hasFocus ->
+//        etmessage?.onFocusChangeListener = OnFocusChangeListener { _, hasFocus ->
 //            if (hasFocus) {
-//                etmessage!!.hint = ""
+//                etmessage?.hint = ""
 //            }
 //        }
-//        etmessage!!.isVerticalScrollBarEnabled = true
-//        etmessage!!.isScrollbarFadingEnabled = false
-//        etmessage!!.addTextChangedListener(object : TextWatcher {
+//        etmessage?.isVerticalScrollBarEnabled = true
+//        etmessage?.isScrollbarFadingEnabled = false
+//        etmessage?.addTextChangedListener(object : TextWatcher {
 //            override fun beforeTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
 //            override fun onTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {
-//                if (etmessage!!.text.toString().trim { it <= ' ' }.isNotEmpty()) {
+//                if (etmessage?.text.toString().trim { it <= ' ' }.isNotEmpty()) {
 //                    btnSend.isEnabled = true
 //                    btnSend.isSelected = true
 //                } else {
@@ -527,29 +539,29 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //
 //        //
 //        pubSubMessageListener = PubSubMessageListener { message ->
-//            messageAdapter!!.addItem(message)
-//            messageRcv.scrollToPosition(messageAdapter!!.itemCount - 1)
+//            messageAdapter?.addItem(message)
+//            messageRcv.scrollToPosition(messageAdapter?.itemCount - 1)
 //        }
 //
 //        // Subscribe for 'CHAT' topic
-//        val pubSubMessageList = meeting!!.pubSub.subscribe("CHAT", pubSubMessageListener)
+//        val pubSubMessageList = meeting?.pubSub.subscribe("CHAT", pubSubMessageListener)
 //
 //        //
 //        messageAdapter =
-//            MessageAdapter(this, pubSubMessageList, meeting!!)
+//            MessageAdapter(this, pubSubMessageList, meeting?)
 //        messageRcv.adapter = messageAdapter
 //        messageRcv.addOnLayoutChangeListener { _: View?, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int ->
 //            messageRcv.scrollToPosition(
-//                messageAdapter!!.itemCount - 1
+//                messageAdapter?.itemCount - 1
 //            )
 //        }
 //        v3.findViewById<View>(live.videosdk.rtc.android.R.id.btnSend).setOnClickListener {
-//            val message: String = etmessage!!.text.toString()
+//            val message: String = etmessage?.text.toString()
 //            if (message != "") {
 //                val publishOptions = PubSubPublishOptions()
 //                publishOptions.isPersist = true
-//                meeting!!.pubSub.publish("CHAT", message, publishOptions)
-//                etmessage!!.setText("")
+//                meeting?.pubSub.publish("CHAT", message, publishOptions)
+//                etmessage?.setText("")
 //            } else {
 //                Toast.makeText(
 //                    this@GroupCallActivity, "Please Enter Message",
@@ -558,10 +570,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //            }
 //        }
 //        close = v3.findViewById(live.videosdk.rtc.android.R.id.ic_close)
-//        bottomSheetDialog!!.show()
-//        close.setOnClickListener { bottomSheetDialog!!.dismiss() }
-//        bottomSheetDialog!!.setOnDismissListener {
-//            meeting!!.pubSub.unsubscribe(
+//        bottomSheetDialog?.show()
+//        close.setOnClickListener { bottomSheetDialog?.dismiss() }
+//        bottomSheetDialog?.setOnDismissListener {
+//            meeting?.pubSub.unsubscribe(
 //                "CHAT",
 //                pubSubMessageListener
 //            )
@@ -570,16 +582,16 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private fun toggleMic() {
         if (micEnabled) {
-            meeting!!.muteMic()
+            meeting?.muteMic()
         } else {
             val audioCustomTrack = VideoSDK.createAudioTrack("high_quality", context)
-            meeting!!.unmuteMic(audioCustomTrack)
+            meeting?.unmuteMic(audioCustomTrack)
         }
     }
 
     private fun toggleWebCam() {
         if (webcamEnabled) {
-            meeting!!.disableWebcam()
+            meeting?.disableWebcam()
         } else {
             val videoCustomTrack = VideoSDK.createCameraVideoTrack(
                 "h720p_w960p",
@@ -587,17 +599,17 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 CustomStreamTrack.VideoMode.DETAIL,
                 baseContext
             )
-            meeting!!.enableWebcam(videoCustomTrack)
+            meeting?.enableWebcam(videoCustomTrack)
         }
     }
 
     private fun showAudioInputDialog() {
-        val mics = meeting!!.mics
+        val mics = meeting?.mics
         var audioDeviceListItem: MeetingMenuItem?
         val audioDeviceList: ArrayList<MeetingMenuItem?> = ArrayList<MeetingMenuItem?>()
         // Prepare list
         var item: String
-        for (i in mics.indices) {
+        for (i in mics?.indices!!) {
             item = mics.toTypedArray()[i].toString()
             var mic =
                 item.substring(0, 1).uppercase(Locale.getDefault()) + item.substring(1).lowercase(
@@ -619,7 +631,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             )
                 .setAdapter(arrayAdapter) { _: DialogInterface?, which: Int ->
                     var audioDevice: AppRTCAudioManager.AudioDevice? = null
-                    when (audioDeviceList[which]!!.itemName) {
+                    when (audioDeviceList[which]?.itemName) {
                         "Bluetooth" -> audioDevice = AppRTCAudioManager.AudioDevice.BLUETOOTH
                         "Wired headset" -> audioDevice =
                             AppRTCAudioManager.AudioDevice.WIRED_HEADSET
@@ -627,7 +639,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                             AppRTCAudioManager.AudioDevice.SPEAKER_PHONE
                         "Earpiece" -> audioDevice = AppRTCAudioManager.AudioDevice.EARPIECE
                     }
-                    meeting!!.changeMic(
+                    meeting?.changeMic(
                         audioDevice,
                         VideoSDK.createAudioTrack("high_quality", baseContext)
                     )
@@ -644,13 +656,13 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         listView.setFooterDividersEnabled(false)
         listView.addFooterView(View(baseContext))
         listView.dividerHeight = 2
-        val wmlp = alertDialog.window!!.attributes
-        wmlp.gravity = Gravity.BOTTOM or Gravity.END
+        val wmlp = alertDialog.window?.attributes
+        wmlp?.gravity = Gravity.BOTTOM or Gravity.END
         val layoutParams = WindowManager.LayoutParams()
-        layoutParams.copyFrom(alertDialog.window!!.attributes)
+        layoutParams.copyFrom(alertDialog.window?.attributes)
         layoutParams.width = (getWindowWidth() * 0.6).roundToInt()
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-        alertDialog.window!!.attributes = layoutParams
+        alertDialog.window?.attributes = layoutParams
         alertDialog.show()
     }
 
@@ -670,22 +682,14 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 setLocalListeners()
                 meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
             }
-//                NetworkUtils(this@GroupCallActivity).fetchMeetingTime(
-//                    meeting!!.meetingId,
-//                    token,
-//                    object : ResponseListener<Int> {
-//                        override fun onResponse(meetingTime: Int?) {
-//                            meetingSeconds = meetingTime!!
-//                            showMeetingTime()
-//                        }
-//                    })
-//                viewPager2!!.offscreenPageLimit = 1
-//                viewPager2!!.adapter = viewAdapter
+
+            binding.viewPagerVideoGrid.offscreenPageLimit = 1
+            binding.viewPagerVideoGrid.adapter = viewAdapter
 //                raiseHandListener =
 //                    PubSubMessageListener { pubSubMessage ->
 //                        val parentLayout = findViewById<View>(android.R.id.content)
 //                        var snackbar: Snackbar
-//                        if ((pubSubMessage.senderId == meeting!!.localParticipant.id)) {
+//                        if ((pubSubMessage.senderId == meeting?.localParticipant.id)) {
 //                            snackbar = Snackbar.make(
 //                                parentLayout,
 //                                "You raised hand",
@@ -715,9 +719,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //                    }
 //
 //                // notify user for raise hand
-//                meeting!!.pubSub.subscribe("RAISE_HAND", raiseHandListener)
+//                meeting?.pubSub.subscribe("RAISE_HAND", raiseHandListener)
 //                chatListener = PubSubMessageListener { pubSubMessage ->
-//                    if (pubSubMessage.senderId != meeting!!.localParticipant.id) {
+//                    if (pubSubMessage.senderId != meeting?.localParticipant.id) {
 //                        val parentLayout = findViewById<View>(android.R.id.content)
 //                        val snackbar = Snackbar.make(
 //                            parentLayout, (pubSubMessage.senderName + " says: " +
@@ -731,7 +735,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //                    }
 //                }
 //                // notify user of any new messages
-//                meeting!!.pubSub.subscribe("CHAT", chatListener)
+//                meeting?.pubSub.subscribe("CHAT", chatListener)
 //
 //
 //            }
@@ -746,7 +750,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
         override fun onRecordingStarted() {
             recording = true
-            recordingStatusSnackbar!!.dismiss()
+            recordingStatusSnackbar?.dismiss()
             binding.recordingLottie.visibility =
                 View.VISIBLE
             Toast.makeText(
@@ -775,7 +779,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 val errorCodes = VideoSDK.getErrorCodes()
                 val code = error.getInt("code")
                 if (code == errorCodes.getInt("PREV_RECORDING_PROCESSING")) {
-                    recordingStatusSnackbar!!.dismiss()
+                    recordingStatusSnackbar?.dismiss()
                 }
                 val snackbar = Snackbar.make(
                     binding.mainLayout,
@@ -812,7 +816,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //                snackbar.view.setOnClickListener { snackbar.dismiss() }
 //                snackbar.show()
 //                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                    if (handler.hasCallbacks((runnable)!!)) handler.removeCallbacks((runnable)!!)
+//                    if (handler.hasCallbacks((runnable)?)) handler.removeCallbacks((runnable)?)
 //                }
 //            }
         }
@@ -837,7 +841,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         // find participant
-        val participant = meeting!!.participants[participantId] ?: return
+        val participant = meeting?.participants?.get(participantId) ?: return
 
         // find share stream in participant
         var shareStream: Stream? = null
@@ -866,10 +870,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             binding.mainLayout, participant.displayName + " started presenting",
             Snackbar.LENGTH_SHORT
         )
-        HelperClass.setSnackBarStyle(screenShareParticipantNameSnackbar!!.view, 0)
-        screenShareParticipantNameSnackbar!!.isGestureInsetBottomIgnored = true
-        screenShareParticipantNameSnackbar!!.view.setOnClickListener { screenShareParticipantNameSnackbar!!.dismiss() }
-        screenShareParticipantNameSnackbar!!.show()
+        screenShareParticipantNameSnackbar?.view?.let { HelperClass.setSnackBarStyle(it, 0) }
+        screenShareParticipantNameSnackbar?.isGestureInsetBottomIgnored = true
+        screenShareParticipantNameSnackbar?.view?.setOnClickListener { screenShareParticipantNameSnackbar?.dismiss() }
+        screenShareParticipantNameSnackbar?.show()
 
 
         // listen for share stop event
@@ -879,7 +883,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                     val track: VideoTrack = stream.track as VideoTrack
                     binding.shareView.removeTrack()
                     binding.shareView.visibility = View.GONE
-                    View.GONE.also { binding.shareLayout!!.visibility = it }
+                    View.GONE.also { binding.shareLayout?.visibility = it }
                     binding.tvScreenShareParticipantName.visibility =
                         View.GONE
                     binding.ivParticipantScreenShareNetwork.visibility =
@@ -892,7 +896,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun setLocalListeners() {
-        meeting!!.localParticipant.addEventListener(object : ParticipantEventListener() {
+        meeting?.localParticipant?.addEventListener(object : ParticipantEventListener() {
             override fun onStreamEnabled(stream: Stream) {
                 if (stream.kind.equals("video", ignoreCase = true)) {
                     webcamEnabled = true
@@ -915,7 +919,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                         )
                     }
                     screenShareParticipantNameSnackbar?.isGestureInsetBottomIgnored = true
-                    screenShareParticipantNameSnackbar?.view?.setOnClickListener { screenShareParticipantNameSnackbar!!.dismiss() }
+                    screenShareParticipantNameSnackbar?.view?.setOnClickListener { screenShareParticipantNameSnackbar?.dismiss() }
                     screenShareParticipantNameSnackbar?.show()
                     localScreenShare = true
                     screenshareEnabled = true
@@ -1027,7 +1031,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             binding.btnWebcam.setImageResource(R.drawable.ic_video_camera)
             binding.btnWebcam.setColorFilter(Color.WHITE)
             var buttonDrawable = binding.btnWebcam.background
-            buttonDrawable = DrawableCompat.wrap(buttonDrawable!!)
+            buttonDrawable = DrawableCompat.wrap(buttonDrawable)
             //the color is a direct color int and not a color resource
             DrawableCompat.setTint(buttonDrawable, Color.TRANSPARENT)
             binding.btnWebcam.background = buttonDrawable
@@ -1035,7 +1039,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             binding.btnWebcam.setImageResource(R.drawable.ic_video_camera_off)
             binding.btnWebcam.setColorFilter(Color.BLACK)
             var buttonDrawable = binding.btnWebcam.background
-            buttonDrawable = DrawableCompat.wrap(buttonDrawable!!)
+            buttonDrawable = DrawableCompat.wrap(buttonDrawable)
             //the color is a direct color int and not a color resource
             DrawableCompat.setTint(buttonDrawable, Color.WHITE)
             binding.btnWebcam.background = buttonDrawable
