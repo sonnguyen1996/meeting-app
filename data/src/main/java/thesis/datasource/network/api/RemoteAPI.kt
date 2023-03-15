@@ -12,7 +12,7 @@ interface RemoteAPI {
         @Path("id") id: String
     ): RoomResponse
 
-    @GET("https://api.videosdk.live/v2/sessions/?roomId={meetingId}")
+    @GET("sessions/?roomId={meetingId}")
     suspend fun fetchMeetingTime(
         @Path("meetingId") meetingId: String
     ): SessionResponse

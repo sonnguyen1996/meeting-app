@@ -1,6 +1,7 @@
 package com.example.fpt.ui.adapter
 
 import android.text.TextUtils
+import android.view.View.OnTouchListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
@@ -13,7 +14,8 @@ import live.videosdk.rtc.android.listeners.MeetingEventListener
 class ParticipantViewAdapter(
     fragmentManager: FragmentManager,
     val lifecycle: Lifecycle,
-    var meeting: Meeting
+    var meeting: Meeting,
+    val listener: OnTouchListener?
 ) : FragmentStateAdapter(fragmentManager, lifecycle) {
     var participantListSize = 4
 
@@ -32,7 +34,7 @@ class ParticipantViewAdapter(
     }
 
     override fun createFragment(position: Int): Fragment {
-        return ParticipantViewFragment(meeting, position)
+        return ParticipantViewFragment(meeting, position, listener)
     }
 
     override fun getItemCount(): Int {

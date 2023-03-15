@@ -7,6 +7,7 @@ import android.graphics.drawable.ColorDrawable
 import android.media.projection.MediaProjectionManager
 import android.os.*
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -86,12 +87,13 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     override fun initView() {
         initMeeting()
-        viewAdapter = meeting?.let {
-            ParticipantViewAdapter(
-                childFragmentManager,
-                lifecycle, it
-            )
-        }
+//        viewAdapter = meeting?.let {
+//            ParticipantViewAdapter(
+//                childFragmentManager,
+//                lifecycle, it,
+//                onTouchListener
+//            )
+//        }
 
         binding.txtMeetingId.text = meetingInfo?.meetingId
 
@@ -396,7 +398,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun showLeaveOrEndDialog() {
-        val optionsArrayList: ArrayList<MeetingMenuItem> = ArrayList<MeetingMenuItem>()
+        val optionsArrayList: ArrayList<MeetingMenuItem> = ArrayList()
         val leaveMeeting =
             context?.let { context ->
                 AppCompatResources.getDrawable(context, R.drawable.ic_leave)?.let { drawable ->
@@ -680,6 +682,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 toggleMicIcon()
                 toggleWebcamIcon()
                 setLocalListeners()
+                Log.d("xxx","onMeetingJoined")
                 meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
             }
 

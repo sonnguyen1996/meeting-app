@@ -5,10 +5,12 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.OnTouchListener
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.PopupWindow
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.cardview.widget.CardView
 import androidx.viewpager2.widget.ViewPager2
 import com.demo.domain.domain.entities.ErrorResult
@@ -28,74 +30,67 @@ import live.videosdk.rtc.android.VideoView
 import live.videosdk.rtc.android.listeners.ParticipantEventListener
 import org.webrtc.VideoTrack
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
+import kotlin.math.min
 
-
-class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
+class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var listener : OnTouchListener?) :
     BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
-    var participantGridLayout: GridLayout? = null
-    var participantChangeListener: ParticipantChangeListener? = null
-    var participantState: ParticipantState? = null
+    private var participantGridLayout: GridLayout? = null
+
+    private var participantChangeListener: ParticipantChangeListener? = null
+
+    private var participantState: ParticipantState? = null
+
     private var participants: List<Participant>? = null
+
     private var participantListArr: List<List<Participant>>? = null
-    var tabLayoutMediator: TabLayoutMediator? = null
-    var viewPager2: ViewPager2? = null
-    var tabLayout: TabLayout? = null
+
+    private var tabLayoutMediator: TabLayoutMediator? = null
+
+    private var viewPager2: ViewPager2? = null
+
+    private var tabLayout: TabLayout? = null
+
     private var popupwindow_obj: PopupWindow? = null
+
     private var participantsInGrid: MutableMap<String, Participant>? = null
+
     private val participantsView: MutableMap<String, View> = HashMap()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        participantGridLayout?.setOnTouchListener(hostActivity)
-        participantChangeListener = object : ParticipantChangeListener {
-            override fun onChangeParticipant(participantList: List<List<Participant?>?>?) {
-                changeLayout(participantList!!, null)
-            }
+        participantGridLayout?.setOnTouchListener(listener)
 
-            override fun onPresenterChanged(screenShare: Boolean) {
-                showInGUI(null)
-                updateGridLayout(screenShare)
-            }
-
-            override fun onSpeakerChanged(
-                participantList: List<List<Participant?>?>?,
-                activeSpeaker: Participant?
-            ) {
-                participantList?.let { changeLayout(it, activeSpeaker!!) } ?: activeSpeakerLayout(
-                    activeSpeaker
-                )
-            }
-        }
         participantState = meeting?.let { ParticipantState.getInstance(it) }
         participantState?.addParticipantChangeListener(participantChangeListener as ParticipantChangeListener)
     }
 
     private fun changeLayout(
-        participantList: List<List<Participant?>?>?,
+        participantList: List<List<Participant>>,
         activeSpeaker: Participant?
     ) {
-        participantListArr = (participantList as List<List<Participant>>?)!!
-        if (position < participantList!!.size) {
+        participantListArr = participantList
+        if (position < participantList.size) {
             participants = participantList[position]
             if (popupwindow_obj != null && popupwindow_obj!!.isShowing) popupwindow_obj!!.dismiss()
             showInGUI(activeSpeaker)
             tabLayoutMediator = TabLayoutMediator(
                 tabLayout!!, viewPager2!!, true
-            ) { tab: TabLayout.Tab?, position: Int ->
+            ) { _: TabLayout.Tab?, _: Int ->
                 Log.d(
                     "TAG",
                     "onCreate: "
                 )
             }
-            if (tabLayoutMediator!!.isAttached) {
-                tabLayoutMediator!!.detach()
+            if (tabLayoutMediator?.isAttached == true) {
+                tabLayoutMediator?.detach()
             }
             tabLayoutMediator!!.attach()
             if (participantList.size == 1) {
-                tabLayout!!.visibility = View.GONE
+                tabLayout?.visibility = View.GONE
             } else {
-                tabLayout!!.visibility = View.VISIBLE
+                tabLayout?.visibility = View.VISIBLE
             }
         }
     }
@@ -118,10 +113,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
 
     override fun isNeedHideBottomBar() = true
 
-    override fun provideLayoutId(): Int {
-        TODO("Not yet implemented")
-    }
-
+    override fun provideLayoutId() = R.layout.fragment_participant_view
     override fun onRequestError(errorResponse: ErrorResult) {
     }
 
@@ -130,12 +122,36 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
     override fun initActions() {
     }
 
+    private fun initMeetingEvent() {
+        participantChangeListener = object : ParticipantChangeListener {
+            override fun onChangeParticipant(participantList: List<List<Participant>>) {
+                changeLayout(participantList, null)
+            }
+
+            override fun onPresenterChanged(screenShare: Boolean) {
+                showInGUI(null)
+                updateGridLayout(screenShare)
+            }
+
+            override fun onSpeakerChanged(
+                participantList: List<List<Participant>>?,
+                activeSpeaker: Participant?
+            ) {
+                participantList?.let { changeLayout(it, activeSpeaker!!) } ?: activeSpeakerLayout(
+                    activeSpeaker
+                )
+            }
+        }
+    }
+
+
     override fun initData() {
     }
 
     override fun initView() {
         viewPager2 = requireActivity().findViewById(R.id.view_pager_video_grid)
         tabLayout = requireActivity().findViewById(R.id.tab_layout_dots)
+        initMeetingEvent()
     }
 
     override fun onPause() {
@@ -187,21 +203,14 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
                 participantsView[participant.id] = participantView
                 val participantCard = participantView.findViewById<CardView>(R.id.ParticipantCard)
                 val ivMicStatus = participantView.findViewById<ImageView>(R.id.ivMicStatus)
-                //            GifImageView img_participantActiveSpeaker = participantView.findViewById(R.id.img_participantActiveSpeaker);
                 if (activeSpeaker == null) {
                     participantCard.foreground = null
-                    //                img_participantActiveSpeaker.setVisibility(View.GONE);
-//                ivMicStatus.setVisibility(View.VISIBLE);
                 } else {
                     if (participant.id == activeSpeaker.id) {
                         participantCard.foreground =
-                            requireContext().getDrawable(R.drawable.layout_bg)
-                        //                    ivMicStatus.setVisibility(View.GONE);
-//                    img_participantActiveSpeaker.setVisibility(View.VISIBLE);
+                            AppCompatResources.getDrawable(baseContext, R.drawable.layout_bg)
                     } else {
                         participantCard.foreground = null
-                        //                    img_participantActiveSpeaker.setVisibility(View.GONE);
-//                    ivMicStatus.setVisibility(View.VISIBLE);
                     }
                 }
                 var participantStreamChangeListener: ParticipantStreamChangeListener
@@ -220,7 +229,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
                         participant, ivNetwork,
                         requireContext(), false
                     )
-                    popupwindow_obj!!.showAsDropDown(ivNetwork, -350, -85)
+                    popupwindow_obj?.showAsDropDown(ivNetwork, -350, -85)
                 }
                 val tvName = participantView.findViewById<TextView>(R.id.tvName)
                 val txtParticipantName =
@@ -261,7 +270,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
                     override fun onStreamDisabled(stream: Stream) {
                         if (stream.kind.equals("video", ignoreCase = true)) {
                             val track = stream.track as VideoTrack
-                            if (track != null) participantVideoView.removeTrack()
+                            participantVideoView.removeTrack()
                             participantVideoView.visibility = View.GONE
                         } else if (stream.kind.equals("audio", ignoreCase = true)) {
                             ivMicStatus.setImageResource(R.drawable.ic_audio_off)
@@ -279,21 +288,13 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
             val participant = participants!![j]
             val participantView = participantGridLayout!!.getChildAt(j)
             val participantCard = participantView.findViewById<CardView>(R.id.ParticipantCard)
-//           ImageView ivMicStatus = participantView.findViewById(R.id.ivMicStatus);
-//            GifImageView img_participantActiveSpeaker = participantView.findViewById(R.id.img_participantActiveSpeaker);
             if (activeSpeaker == null) {
                 participantCard.foreground = null
-//                img_participantActiveSpeaker.setVisibility(View.GONE);
-//                ivMicStatus.setVisibility(View.VISIBLE);
             } else {
                 if (participant.id == activeSpeaker.id) {
-                    participantCard.foreground = requireContext().getDrawable(R.drawable.layout_bg)
-//                    ivMicStatus.setVisibility(View.GONE);
-//                    img_participantActiveSpeaker.setVisibility(View.VISIBLE);
+                    participantCard.foreground = AppCompatResources.getDrawable(baseContext, R.drawable.layout_bg )
                 } else {
                     participantCard.foreground = null
-//                    img_participantActiveSpeaker.setVisibility(View.GONE);
-//                    ivMicStatus.setVisibility(View.VISIBLE);
                 }
             }
         }
@@ -332,7 +333,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
                     col++
                 }
             }
-            participantGridLayout!!.requestLayout()
+            participantGridLayout?.requestLayout()
         } else {
             var col = 0
             var row = 0
@@ -352,12 +353,11 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int) :
         }
     }
 
-    private val normalLayoutRowCount: Int
-        private get() = Math.min(Math.max(1, participantsView.size), 2)
+    private val normalLayoutRowCount = min(max(1, participantsView.size), 2)
     private val normalLayoutColumnCount: Int
-        private get() {
+        get() {
             val maxColumns = 2
-            val result = Math.max(
+            val result = max(
                 1,
                 (participantsView.size + normalLayoutRowCount - 1) / normalLayoutRowCount
             )
