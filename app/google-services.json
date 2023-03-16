@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "559012528635",
+    "project_id": "mse-thesis-project",
+    "storage_bucket": "mse-thesis-project.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559012528635:android:ceeaeb0dd828d1e0730b5e",
+        "android_client_info": {
+          "package_name": "com.example.demothesisfpteduvn"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "559012528635-2q985vedmme2lmd5k8kephsq6ragvsff.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6lZe_NAqCUSM2-lMKbBZAYKS_B1igJqE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "559012528635-2q985vedmme2lmd5k8kephsq6ragvsff.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
