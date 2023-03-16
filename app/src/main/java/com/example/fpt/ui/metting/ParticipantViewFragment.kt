@@ -12,6 +12,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.cardview.widget.CardView
+import androidx.fragment.app.activityViewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
@@ -23,6 +24,7 @@ import com.example.fpt.ui.metting.ultils.HelperClass
 import com.example.fpt.ui.metting.ultils.ParticipantState
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import dagger.hilt.android.AndroidEntryPoint
 import live.videosdk.rtc.android.Meeting
 import live.videosdk.rtc.android.Participant
 import live.videosdk.rtc.android.Stream
@@ -33,9 +35,12 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 
-class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var listener : OnTouchListener?) :
-    BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
-    private var participantGridLayout: GridLayout? = null
+@AndroidEntryPoint
+class ParticipantViewFragment(
+    var meeting: Meeting?,
+    var position: Int,
+    var listener: OnTouchListener?
+) :BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
 
     private var participantChangeListener: ParticipantChangeListener? = null
 
@@ -57,14 +62,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
 
     private val participantsView: MutableMap<String, View> = HashMap()
 
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        participantGridLayout?.setOnTouchListener(listener)
-
-        participantState = meeting?.let { ParticipantState.getInstance(it) }
-        participantState?.addParticipantChangeListener(participantChangeListener as ParticipantChangeListener)
-    }
+    private val captureViewModel: CapturingViewModel by activityViewModels()
 
     private fun changeLayout(
         participantList: List<List<Participant>>,
@@ -73,7 +71,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
         participantListArr = participantList
         if (position < participantList.size) {
             participants = participantList[position]
-            if (popupwindow_obj != null && popupwindow_obj!!.isShowing) popupwindow_obj!!.dismiss()
+            if (popupwindow_obj != null && popupwindow_obj!!.isShowing) popupwindow_obj?.dismiss()
             showInGUI(activeSpeaker)
             tabLayoutMediator = TabLayoutMediator(
                 tabLayout!!, viewPager2!!, true
@@ -86,7 +84,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
             if (tabLayoutMediator?.isAttached == true) {
                 tabLayoutMediator?.detach()
             }
-            tabLayoutMediator!!.attach()
+            tabLayoutMediator?.attach()
             if (participantList.size == 1) {
                 tabLayout?.visibility = View.GONE
             } else {
@@ -120,6 +118,8 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
     override fun provideViewModelClass() = MeetingViewModel::class.java
 
     override fun initActions() {
+        participantState = meeting?.let { ParticipantState.getInstance(it) }
+        participantState?.addParticipantChangeListener(participantChangeListener as ParticipantChangeListener)
     }
 
     private fun initMeetingEvent() {
@@ -146,12 +146,18 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
 
 
     override fun initData() {
+        captureViewModel.executeCaptureImage.observe(
+            viewLifecycleOwner
+        ) { isExecute ->
+            Log.d("xxx","isExecute")
+        }
     }
 
     override fun initView() {
         viewPager2 = requireActivity().findViewById(R.id.view_pager_video_grid)
         tabLayout = requireActivity().findViewById(R.id.tab_layout_dots)
         initMeetingEvent()
+        binding.participantGridLayout.setOnTouchListener(listener)
     }
 
     override fun onPause() {
@@ -189,7 +195,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
                         val participantVideoView =
                             participantsView[key.id]!!.findViewById<VideoView>(R.id.participantVideoView)
                         participantVideoView.releaseSurfaceViewRenderer()
-                        participantGridLayout!!.removeView(participantsView[key.id])
+                        binding.participantGridLayout.removeView(participantsView[key.id])
                         participantsView.remove(key.id)
                         updateGridLayout(false)
                     }
@@ -199,7 +205,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
                 if (participantsInGrid == null) participantsInGrid = ConcurrentHashMap()
                 participantsInGrid!![participant.id] = participant
                 val participantView: View = LayoutInflater.from(context)
-                    .inflate(R.layout.item_participant, participantGridLayout, false)
+                    .inflate(R.layout.item_participant, binding.participantGridLayout, false)
                 participantsView[participant.id] = participantView
                 val participantCard = participantView.findViewById<CardView>(R.id.ParticipantCard)
                 val ivMicStatus = participantView.findViewById<ImageView>(R.id.ivMicStatus)
@@ -277,22 +283,23 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
                         }
                     }
                 })
-                participantGridLayout!!.addView(participantView)
+                binding.participantGridLayout.addView(participantView)
                 updateGridLayout(false)
             }
         }
     }
 
     fun activeSpeakerLayout(activeSpeaker: Participant?) {
-        for (j in 0 until participantGridLayout!!.childCount) {
+        for (j in 0 until binding.participantGridLayout.childCount) {
             val participant = participants!![j]
-            val participantView = participantGridLayout!!.getChildAt(j)
+            val participantView = binding.participantGridLayout.getChildAt(j)
             val participantCard = participantView.findViewById<CardView>(R.id.ParticipantCard)
             if (activeSpeaker == null) {
                 participantCard.foreground = null
             } else {
                 if (participant.id == activeSpeaker.id) {
-                    participantCard.foreground = AppCompatResources.getDrawable(baseContext, R.drawable.layout_bg )
+                    participantCard.foreground =
+                        AppCompatResources.getDrawable(baseContext, R.drawable.layout_bg)
                 } else {
                     participantCard.foreground = null
                 }
@@ -304,15 +311,15 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
         if (participantChangeListener != null) {
             participantState!!.removeParticipantChangeListener(participantChangeListener!!)
         }
-        for (i in 0 until participantGridLayout!!.childCount) {
-            val view = participantGridLayout!!.getChildAt(i)
+        for (i in 0 until binding.participantGridLayout.childCount) {
+            val view = binding.participantGridLayout.getChildAt(i)
             val videoView = view.findViewById<VideoView>(R.id.participantVideoView)
             if (videoView != null) {
                 videoView.visibility = View.GONE
                 videoView.releaseSurfaceViewRenderer()
             }
         }
-        participantGridLayout!!.removeAllViews()
+        binding.participantGridLayout.removeAllViews()
         participantsInGrid = null
         super.onDestroy()
     }
@@ -321,9 +328,9 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
         if (screenShareFlag) {
             var col = 0
             var row = 0
-            for (i in 0 until participantGridLayout!!.childCount) {
+            for (i in 0 until binding.participantGridLayout.childCount) {
                 val params =
-                    participantGridLayout!!.getChildAt(i).layoutParams as GridLayout.LayoutParams
+                    binding.participantGridLayout.getChildAt(i).layoutParams as GridLayout.LayoutParams
                 params.columnSpec = GridLayout.spec(col, 1, 1f)
                 params.rowSpec = GridLayout.spec(row, 1, 1f)
                 if (col + 1 == 2) {
@@ -333,13 +340,13 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
                     col++
                 }
             }
-            participantGridLayout?.requestLayout()
+            binding.participantGridLayout.requestLayout()
         } else {
             var col = 0
             var row = 0
-            for (i in 0 until participantGridLayout!!.childCount) {
+            for (i in 0 until binding.participantGridLayout.childCount) {
                 val params =
-                    participantGridLayout!!.getChildAt(i).layoutParams as GridLayout.LayoutParams
+                    binding.participantGridLayout.getChildAt(i).layoutParams as GridLayout.LayoutParams
                 params.columnSpec = GridLayout.spec(col, 1, 1f)
                 params.rowSpec = GridLayout.spec(row, 1, 1f)
                 if (col + 1 == normalLayoutColumnCount) {
@@ -349,7 +356,7 @@ class ParticipantViewFragment(var meeting: Meeting?, var position: Int, var list
                     col++
                 }
             }
-            participantGridLayout!!.requestLayout()
+            binding.participantGridLayout.requestLayout()
         }
     }
 

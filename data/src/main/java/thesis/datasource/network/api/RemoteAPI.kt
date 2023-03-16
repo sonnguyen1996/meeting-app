@@ -4,6 +4,7 @@ import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 
 interface RemoteAPI {
@@ -12,9 +13,9 @@ interface RemoteAPI {
         @Path("id") id: String
     ): RoomResponse
 
-    @GET("sessions/?roomId={meetingId}")
+    @GET("sessions/?")
     suspend fun fetchMeetingTime(
-        @Path("meetingId") meetingId: String
+        @Query("roomId") meetingId: String
     ): SessionResponse
 
 }

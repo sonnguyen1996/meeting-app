@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.fragment.app.activityViewModels
 import com.demo.domain.domain.entities.ErrorResult
 import com.demo.domain.domain.response.MeetingInfo
 import com.example.demothesisfpteduvn.BuildConfig
@@ -31,6 +32,7 @@ import com.example.fpt.ui.adapter.AudioDeviceListAdapter
 import com.example.fpt.ui.adapter.LeaveOptionListAdapter
 import com.example.fpt.ui.adapter.MoreOptionsListAdapter
 import com.example.fpt.ui.adapter.ParticipantViewAdapter
+import com.example.fpt.ui.metting.ultils.ParticipantState
 import dagger.hilt.android.AndroidEntryPoint
 import live.videosdk.rtc.android.lib.AppRTCAudioManager
 import live.videosdk.rtc.android.listeners.MeetingEventListener
@@ -77,6 +79,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private var meetingInfo: MeetingInfo? = null
 
+    private val captureViewModel: CapturingViewModel by activityViewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (arguments != null) {
@@ -87,13 +91,13 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     override fun initView() {
         initMeeting()
-//        viewAdapter = meeting?.let {
-//            ParticipantViewAdapter(
-//                childFragmentManager,
-//                lifecycle, it,
-//                onTouchListener
-//            )
-//        }
+        viewAdapter = meeting?.let {
+            ParticipantViewAdapter(
+                childFragmentManager,
+                lifecycle, it,
+                onTouchListener
+            )
+        }
 
         binding.txtMeetingId.text = meetingInfo?.meetingId
 
@@ -118,6 +122,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
             viewModel.startObserver(initialValue)
+            captureViewModel.startObserver(initialValue)
         }
 
 
@@ -125,14 +130,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             viewLifecycleOwner
         ) { meetingTime ->
             binding.txtMeetingTime.text = meetingTime
-        }
-
-        viewModel.executeCaptureImage.observe(
-            viewLifecycleOwner
-        ) { isExecute ->
-            if (isExecute) {
-//               binding.shareView.addFrameListener()
-            }
         }
     }
 
@@ -236,7 +233,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private fun showMoreOptionsDialog() {
         val participantSize = meeting?.participants?.size?.plus(1)
-        val moreOptionsArrayList: ArrayList<MeetingMenuItem> = ArrayList<MeetingMenuItem>()
+        val moreOptionsArrayList: ArrayList<MeetingMenuItem> = ArrayList()
         val raisedHand = AppCompatResources.getDrawable(baseContext, R.drawable.raise_hand)?.let {
             MeetingMenuItem(
                 "Raise Hand",
@@ -433,18 +430,18 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                     arrayAdapter
                 ) { _: DialogInterface?, which: Int ->
                     when (which) {
-//                        0 -> {
-//                            viewPager2?.adapter = null
-//                            ParticipantState.destroy()
+                        0 -> {
+                            binding.viewPagerVideoGrid.adapter = null
+                            ParticipantState.destroy()
 //                            unSubscribeTopics()
-//                            meeting?.leave()
-//                        }
-//                        1 -> {
-//                            viewPager2?.adapter = null
-//                            ParticipantState.destroy()
+                            meeting?.leave()
+                        }
+                        1 -> {
+                            binding.viewPagerVideoGrid.adapter = null
+                            ParticipantState.destroy()
 //                            unSubscribeTopics()
-//                            meeting?.end()
-//                        }
+                            meeting?.end()
+                        }
                     }
                 }
         val alertDialog = materialAlertDialogBuilder.create()
@@ -669,7 +666,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
 
     private fun setAudioDeviceListeners() {
-        meeting?.setAudioDeviceChangeListener { selectedAudioDevice, availableAudioDevices ->
+        meeting?.setAudioDeviceChangeListener { selectedAudioDevice, _ ->
             selectedAudioDeviceName = selectedAudioDevice.toString()
         }
     }
@@ -682,7 +679,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 toggleMicIcon()
                 toggleWebcamIcon()
                 setLocalListeners()
-                Log.d("xxx","onMeetingJoined")
                 meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
             }
 

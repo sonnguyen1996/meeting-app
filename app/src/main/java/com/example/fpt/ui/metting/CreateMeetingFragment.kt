@@ -220,7 +220,7 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
 
     override fun provideLayoutId() = R.layout.fragment_create_meeting
 
-    override fun isNeedHideBottomBar() = false
+    override fun isNeedHideBottomBar() = true
 
     override fun provideViewModelClass() = MeetingViewModel::class.java
 }
