@@ -1,7 +1,6 @@
 package com.example.fpt.ui.metting
 
 import android.annotation.SuppressLint
-import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +24,8 @@ import com.example.fpt.ui.metting.ultils.ParticipantState
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import live.videosdk.rtc.android.Meeting
 import live.videosdk.rtc.android.Participant
 import live.videosdk.rtc.android.Stream
@@ -35,12 +36,13 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 
+
 @AndroidEntryPoint
 class ParticipantViewFragment(
     var meeting: Meeting?,
     var position: Int,
     var listener: OnTouchListener?
-) :BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
+) : BaseFragment<MeetingViewModel, FragmentParticipantViewBinding>() {
 
     private var participantChangeListener: ParticipantChangeListener? = null
 
@@ -63,6 +65,10 @@ class ParticipantViewFragment(
     private val participantsView: MutableMap<String, View> = HashMap()
 
     private val captureViewModel: CapturingViewModel by activityViewModels()
+
+    private var localVideo: VideoView? = null
+
+    var participantStreamChangeListener: ParticipantStreamChangeListener? = null
 
     private fun changeLayout(
         participantList: List<List<Participant>>,
@@ -146,10 +152,16 @@ class ParticipantViewFragment(
 
 
     override fun initData() {
+
         captureViewModel.executeCaptureImage.observe(
             viewLifecycleOwner
         ) { isExecute ->
-            Log.d("xxx","isExecute")
+            localVideo?.addFrameListener({
+                runBlocking (Dispatchers.Main) {
+                    captureViewModel.processImage(it)
+                    binding.imageLOL.setImageBitmap(it)
+                }
+            }, 1f)
         }
     }
 
@@ -219,7 +231,6 @@ class ParticipantViewFragment(
                         participantCard.foreground = null
                     }
                 }
-                var participantStreamChangeListener: ParticipantStreamChangeListener
                 val ivNetwork = participantView.findViewById<ImageView>(R.id.ivNetwork)
                 participantStreamChangeListener = object : ParticipantStreamChangeListener {
                     override fun onStreamChanged() {
@@ -253,10 +264,10 @@ class ParticipantViewFragment(
                         participantVideoView.visibility = View.VISIBLE
                         val videoTrack = stream.track as VideoTrack
                         participantVideoView.addTrack(videoTrack)
-                        participantStreamChangeListener.onStreamChanged()
+                        participantStreamChangeListener?.onStreamChanged()
                         break
                     } else if (stream.kind.equals("audio", ignoreCase = true)) {
-                        participantStreamChangeListener.onStreamChanged()
+                        participantStreamChangeListener?.onStreamChanged()
                         ivMicStatus.setImageResource(R.drawable.ic_audio_on)
                     }
                 }
@@ -266,9 +277,12 @@ class ParticipantViewFragment(
                             participantVideoView.visibility = View.VISIBLE
                             val videoTrack = stream.track as VideoTrack
                             participantVideoView.addTrack(videoTrack)
-                            participantStreamChangeListener.onStreamChanged()
+                            if (participant.id == meeting!!.localParticipant.id) {
+                                localVideo = participantVideoView
+                            }
+                            participantStreamChangeListener?.onStreamChanged()
                         } else if (stream.kind.equals("audio", ignoreCase = true)) {
-                            participantStreamChangeListener.onStreamChanged()
+                            participantStreamChangeListener?.onStreamChanged()
                             ivMicStatus.setImageResource(R.drawable.ic_audio_on)
                         }
                     }

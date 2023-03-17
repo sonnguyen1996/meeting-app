@@ -3,7 +3,11 @@
     <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+         <ImageView
+             android:id="@+id/imageLOL"
 
+             android:layout_width="100dp"
+             android:layout_height="100dp"/>
         <GridLayout
             android:id="@+id/participantGridLayout"
             android:stretchMode="columnWidth"
