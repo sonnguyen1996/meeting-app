@@ -22,12 +22,13 @@ android {
 
     buildTypes {
         debug{
-            buildConfigField("String", "AUTH_TOKEN", "\"" + localProperties['auth_token'] + "\"")
+            buildConfigField("String", "AUTH_TOKEN", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJlNzdjZmQ3OS04OTdiLTRjY2UtYWRlYi0yNmRjNzU1YmZlNTAiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTY3ODY4MzY2NiwiZXhwIjoxNjc5Mjg4NDY2fQ.z0dZxvhSi6xMMup0C1fTNuiCZrN5-1KWpDwSzEL7xH8\"")
             buildConfigField "String", "BASE_MOBILE_URL", "\"https://api.videosdk.live/v2/\""
+
         }
         release {
             minifyEnabled false
-            buildConfigField("String", "AUTH_TOKEN", "\"" + localProperties['auth_token'] + "\"")
+            buildConfigField("String", "AUTH_TOKEN", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJlNzdjZmQ3OS04OTdiLTRjY2UtYWRlYi0yNmRjNzU1YmZlNTAiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTY3ODY4MzY2NiwiZXhwIjoxNjc5Mjg4NDY2fQ.z0dZxvhSi6xMMup0C1fTNuiCZrN5-1KWpDwSzEL7xH8\"")
             buildConfigField "String", "BASE_MOBILE_URL", "\"https://api.videosdk.live/v2/\""
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

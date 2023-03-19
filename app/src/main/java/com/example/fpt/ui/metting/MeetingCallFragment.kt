@@ -121,12 +121,11 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val startTime = startMeetingDate?.time ?: 0
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
-            viewModel.startObserver(initialValue)
             captureViewModel.startObserver(initialValue)
         }
 
 
-        viewModel.updateTimeMeeting.observe(
+        captureViewModel.updateTimeMeeting.observe(
             viewLifecycleOwner
         ) { meetingTime ->
             binding.txtMeetingTime.text = meetingTime

@@ -81,7 +81,7 @@ class CapturingViewModel  : BaseViewModel() {
                 minutes, secs
             )
             updateTimeMeeting.postValue(time)
-            if (secs % 5 == 0) {
+            if (secs % 20 == 0) {
               executeCaptureImage.postValue(true)
             }
             meetingSeconds++

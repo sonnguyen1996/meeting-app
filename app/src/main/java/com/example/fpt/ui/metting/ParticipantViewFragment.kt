@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Transformations.map
 import androidx.viewpager2.widget.ViewPager2
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
@@ -152,17 +153,19 @@ class ParticipantViewFragment(
 
 
     override fun initData() {
-
         captureViewModel.executeCaptureImage.observe(
             viewLifecycleOwner
-        ) { isExecute ->
+        ) { _ ->
+            collectData()
             localVideo?.addFrameListener({
                 runBlocking (Dispatchers.Main) {
                     captureViewModel.processImage(it)
-                    binding.imageLOL.setImageBitmap(it)
                 }
             }, 1f)
         }
+    }
+
+    private fun collectData() {
     }
 
     override fun initView() {

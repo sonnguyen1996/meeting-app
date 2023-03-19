@@ -21,16 +21,7 @@ class MeetingViewModel @Inject constructor (
     private val roomResponse: MutableLiveData<RoomResponse> =
         MutableLiveData()
 
-    private var meetingSeconds = 0
-
     private val meetingTimeResponse: MutableLiveData<SessionResponse> =
-        MutableLiveData()
-
-
-    val executeCaptureImage: MutableLiveData<Boolean> =
-        MutableLiveData()
-
-    val updateTimeMeeting: MutableLiveData<String> =
         MutableLiveData()
 
     fun joinMeetingRoom(roomID: String) = coroutineScope.launch {
@@ -41,28 +32,6 @@ class MeetingViewModel @Inject constructor (
     fun fetchMeetingTime(roomID: String) = coroutineScope.launch {
         val response = useCase.fetchMeetingTime(roomID)
         meetingTimeResponse.postValue(response)
-    }
-
-    fun startObserver(initialTime: Int) = heavyTaskScope.launch {
-        meetingSeconds = initialTime
-        while (isActive) {
-            val hours = meetingSeconds / 3600
-            val minutes = (meetingSeconds % 3600) / 60
-            val secs = meetingSeconds % 60
-
-            // Format the seconds into minutes,seconds.
-            val time = String.format(
-                Locale.getDefault(),
-                "%02d:%02d:%02d", hours,
-                minutes, secs
-            )
-            updateTimeMeeting.postValue(time)
-            if (secs % 5 == 0) {
-              executeCaptureImage.postValue(true)
-            }
-            meetingSeconds++
-            delay(1000)
-        }
     }
 
     fun getJoinRoomResponse() = roomResponse
