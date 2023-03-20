@@ -3,6 +3,7 @@ package com.example.fpt.ui.metting
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import com.demo.domain.domain.entities.BehaviourInfo
 import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 import com.example.fpt.ui.base.BaseViewModel
@@ -19,6 +20,9 @@ import java.util.*
 class CapturingViewModel  : BaseViewModel() {
 
     var detector : FaceDetector? = null
+
+    var listDetection : List<BehaviourInfo>? = null
+
     init{
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
@@ -55,7 +59,6 @@ class CapturingViewModel  : BaseViewModel() {
             Log.d("xxx", " eye left ${face.leftEyeOpenProbability}")
             Log.d("xxx", " smile ${face.smilingProbability}")
             Log.d("xxx", " ========================= ")
-
         }
     }
 

@@ -155,17 +155,19 @@ class ParticipantViewFragment(
     override fun initData() {
         captureViewModel.executeCaptureImage.observe(
             viewLifecycleOwner
-        ) { _ ->
-            collectData()
-            localVideo?.addFrameListener({
-                runBlocking (Dispatchers.Main) {
-                    captureViewModel.processImage(it)
-                }
-            }, 1f)
+        ) {
+            (0..10).map {
+                collectData()
+            }
         }
     }
 
     private fun collectData() {
+        localVideo?.addFrameListener({
+            runBlocking (Dispatchers.Main) {
+                captureViewModel.processImage(it)
+            }
+        }, 1f)
     }
 
     override fun initView() {
