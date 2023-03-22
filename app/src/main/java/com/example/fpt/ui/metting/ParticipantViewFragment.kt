@@ -156,7 +156,7 @@ class ParticipantViewFragment(
         captureViewModel.executeCaptureImage.observe(
             viewLifecycleOwner
         ) {
-            (0..10).map {
+            while (!captureViewModel.isCollectDone){
                 collectData()
             }
         }
@@ -165,7 +165,7 @@ class ParticipantViewFragment(
     private fun collectData() {
         localVideo?.addFrameListener({
             runBlocking (Dispatchers.Main) {
-                captureViewModel.processImage(it)
+                meeting?.let { it1 -> captureViewModel.processImage(it, it1) }
             }
         }, 1f)
     }

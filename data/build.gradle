@@ -22,7 +22,7 @@ android {
 
     buildTypes {
         debug{
-            buildConfigField("String", "AUTH_TOKEN", "\"" + localProperties['auth_token'] + "\"")
+            buildConfigField("String", "AUTH_TOKEN", "\"" + "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiJlNzdjZmQ3OS04OTdiLTRjY2UtYWRlYi0yNmRjNzU1YmZlNTAiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTY3OTI4NDI0NCwiZXhwIjoxNjg3MDYwMjQ0fQ.uaWbDn7ebOuOPWIQEYJBS7EOR2O3_yxzGfTzYtJ9giE" + "\"")
             buildConfigField "String", "BASE_MOBILE_URL", "\"https://api.videosdk.live/v2/\""
 
         }

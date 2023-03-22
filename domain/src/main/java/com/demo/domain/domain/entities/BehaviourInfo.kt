@@ -1,18 +1,20 @@
 package com.demo.domain.domain.entities
 
-import com.google.gson.annotations.SerializedName
-import java.io.Serializable
+import com.google.firebase.database.Exclude
+import com.google.firebase.database.IgnoreExtraProperties
 
-open class BehaviourInfo : Serializable {
-    @SerializedName("userID")
-    var userID: String = ""
-
-    @SerializedName("isSleep")
-    var isSleep: Boolean = false
-
-    @SerializedName("isLookAway")
-    var isLookAway: Boolean = false
-
-    @SerializedName("emotion")
-    var emotion: String = ""
+@IgnoreExtraProperties
+data class BehaviourInfo(
+    val isSleep: Boolean? = false,
+    val isLookAway: Boolean? = false,
+    val emotion: String? = null
+){
+    @Exclude
+    fun toMap(): Map<String, Any?> {
+        return mapOf(
+            "isSleep" to isSleep,
+            "isLookAway" to isLookAway,
+            "emotion" to emotion
+        )
+    }
 }

@@ -7,6 +7,9 @@ import com.demo.domain.domain.entities.BehaviourInfo
 import com.demo.domain.domain.response.RoomResponse
 import com.demo.domain.domain.response.SessionResponse
 import com.example.fpt.ui.base.BaseViewModel
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -15,15 +18,20 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import live.videosdk.rtc.android.Meeting
 import java.util.*
 
-class CapturingViewModel  : BaseViewModel() {
+class CapturingViewModel : BaseViewModel() {
 
-    var detector : FaceDetector? = null
+    var detector: FaceDetector? = null
 
-    var listDetection : List<BehaviourInfo>? = null
+    var listDetection: List<BehaviourInfo>? = null
 
-    init{
+    private var database: DatabaseReference
+
+    var isCollectDone = false
+
+    init {
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
@@ -32,34 +40,70 @@ class CapturingViewModel  : BaseViewModel() {
             .enableTracking()
             .build()
         detector = FaceDetection.getClient(options)
+
+        database = Firebase.database.reference
     }
 
-    fun processImage(image: Bitmap) {
+    fun processImage(image: Bitmap, meetingInfo: Meeting) {
         val firebaseVisionImage = InputImage.fromBitmap(image, 0)
 
         detector?.process(firebaseVisionImage)
-            ?.addOnSuccessListener {
-                processFace(it)
+            ?.addOnCompleteListener {
+                if (it.isComplete) {
+                    if (!it.result.isNullOrEmpty()) {
+                        processFace(it.result)
+                    } else {
+                        val behaviourInfo = BehaviourInfo(
+                            isSleep = false,
+                            isLookAway = true,
+                            emotion = "Unidentified"
+                        )
+                        updateValue(meetingInfo, behaviourInfo)
+                    }
+                }
             }
             ?.addOnFailureListener {
+                Log.d("xxx", "exception $it")
             }
 
     }
 
     private fun processFace(faces: List<Face>) {
-        for (face in faces) {
-            val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
-            val rotX = face.headEulerAngleX // Head is tilted sideways rotZ degrees
-
-            val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degrees
-            Log.d("xxx", " turn right $rotY")
-            Log.d("xxx", " turn up $rotX")
-            Log.d("xxx", " turn left $rotZ")
-            Log.d("xxx", " eye right ${face.rightEyeOpenProbability}")
-            Log.d("xxx", " eye left ${face.leftEyeOpenProbability}")
-            Log.d("xxx", " smile ${face.smilingProbability}")
-            Log.d("xxx", " ========================= ")
+        val listBehaviourInfo  = faces.map {
+            return BehaviourInfo().toMap()
         }
+        for (face in faces) {
+
+        }
+    }
+
+    private fun insertSessionUser(meeting: Meeting?) {
+        val behaviourInfo = BehaviourInfo(
+            isSleep = false,
+            isLookAway = false,
+            emotion = "Unidentified"
+        )
+        database.child("roomSession").child(meeting?.meetingId ?: "")
+            .child(meeting?.localParticipant?.id ?: "")
+            .setValue(behaviourInfo)
+            .addOnSuccessListener {
+                Log.d("xxx", "database addOnSuccessListener")
+            }
+            .addOnFailureListener {
+                Log.d("xxx", "database addOnFailureListener")
+            }
+    }
+
+    private fun updateValue(meeting: Meeting?, behaviourInfo: BehaviourInfo) {
+        database.child("roomSession").child(meeting?.meetingId ?: "")
+            .child(meeting?.localParticipant?.id ?: "")
+            .updateChildren(behaviourInfo.toMap())
+            .addOnSuccessListener {
+                isCollectDone = true
+            }
+            .addOnFailureListener {
+                Log.d("xxx", "database addOnFailureListener")
+            }
     }
 
     private var meetingSeconds = 0
@@ -70,8 +114,9 @@ class CapturingViewModel  : BaseViewModel() {
     val updateTimeMeeting: MutableLiveData<String> =
         MutableLiveData()
 
-    fun startObserver(initialTime: Int) = heavyTaskScope.launch {
+    fun startObserver(initialTime: Int, meetingInfo: Meeting?) = heavyTaskScope.launch {
         meetingSeconds = initialTime
+        insertSessionUser(meetingInfo)
         while (isActive) {
             val hours = meetingSeconds / 3600
             val minutes = (meetingSeconds % 3600) / 60
@@ -85,7 +130,7 @@ class CapturingViewModel  : BaseViewModel() {
             )
             updateTimeMeeting.postValue(time)
             if (secs % 20 == 0) {
-              executeCaptureImage.postValue(true)
+                executeCaptureImage.postValue(true)
             }
             meetingSeconds++
             delay(1000)
