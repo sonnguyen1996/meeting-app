@@ -69,12 +69,12 @@ class CapturingViewModel : BaseViewModel() {
     }
 
     private fun processFace(faces: List<Face>) {
-        val listBehaviourInfo  = faces.map {
-            return BehaviourInfo().toMap()
-        }
-        for (face in faces) {
-
-        }
+//        val listBehaviourInfo  = faces.map {
+//            return BehaviourInfo().toMap()
+//        }
+//        for (face in faces) {
+//
+//        }
     }
 
     private fun insertSessionUser(meeting: Meeting?) {
