@@ -7,6 +7,20 @@
         android:layout_height="match_parent"
         android:background="@android:color/black"
         android:fillViewport="true">
+        <FrameLayout
+            android:id="@+id/gaze_point_view_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <com.mikhaellopez.circleview.CircleView
+                android:id="@+id/gaze_point_view"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="40dp"
+                app:cv_color="@android:color/holo_red_dark" />
+        </FrameLayout>
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/content_layout"
@@ -28,7 +42,7 @@
                     android:layout_marginVertical="16dp"
                     app:cardCornerRadius="8dp">
 
-                    <androidx.camera.view.PreviewView
+                    <ImageView
                         android:id="@+id/joiningView"
                         android:layout_width="250dp"
                         android:layout_height="350dp"

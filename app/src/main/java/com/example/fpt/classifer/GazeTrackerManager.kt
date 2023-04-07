@@ -17,6 +17,7 @@ class GazeTrackerManager private constructor(context: Context) {
     private val gazeCallbacks: MutableList<GazeCallback> = ArrayList()
     private val calibrationCallbacks: MutableList<CalibrationCallback> = ArrayList()
     private val userStatusCallbacks: MutableList<UserStatusCallback> = ArrayList()
+    private val imageCallbacks: MutableList<ImageCallback> = ArrayList()
 
     // state control
     var isInitWithUserOption = false
@@ -29,6 +30,7 @@ class GazeTrackerManager private constructor(context: Context) {
 
 
     companion object {
+
         private var instance: GazeTrackerManager? = null
         fun makeNewInstance(context: Context): GazeTrackerManager? {
             instance.also { it?.deInitGazeTracker() }
@@ -77,6 +79,7 @@ class GazeTrackerManager private constructor(context: Context) {
                 is CalibrationCallback -> calibrationCallbacks.add(callback)
                 is StatusCallback -> statusCallbacks.add(callback)
                 is UserStatusCallback -> userStatusCallbacks.add(callback)
+                is ImageCallback -> imageCallbacks.add(callback)
             }
         }
     }
@@ -134,7 +137,8 @@ class GazeTrackerManager private constructor(context: Context) {
                 gazeCallback,
                 calibrationCallback,
                 statusCallback,
-                userStatusCallback
+                userStatusCallback,
+                imageCallback
             )
         }
     private val gazeCallback = GazeCallback { gazeInfo ->
@@ -142,6 +146,15 @@ class GazeTrackerManager private constructor(context: Context) {
             gazeCallback.onGaze(gazeInfo)
         }
     }
+
+
+    private val imageCallback: ImageCallback =
+        ImageCallback { p0, p1 ->
+            for (imageCallback in imageCallbacks) {
+                imageCallback.onImage(p0, p1)
+            }
+        }
+
     private val calibrationCallback: CalibrationCallback = object : CalibrationCallback {
         override fun onCalibrationProgress(progress: Float) {
             for (calibrationCallback in calibrationCallbacks) {

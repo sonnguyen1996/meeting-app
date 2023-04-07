@@ -1,15 +1,13 @@
 package com.example.fpt.ui.metting
 
+import android.R.attr.x
 import android.content.res.ColorStateList
-import android.graphics.Color
+import android.graphics.*
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import android.widget.Toast
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.VideoCapture
-import androidx.core.content.ContextCompat
 import camp.visual.gazetracker.callback.*
 import camp.visual.gazetracker.constant.StatusErrorType
 import com.demo.domain.domain.entities.ErrorResult
@@ -23,8 +21,9 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import live.videosdk.rtc.android.lib.PeerConnectionUtils
 import org.webrtc.*
+import java.io.ByteArrayOutputStream
+
 
 @AndroidEntryPoint
 class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeetingBinding>() {
@@ -50,39 +49,16 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
 
     var recentAttentionScore: Int = 0
 
-
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(baseContext)
-
-        cameraProviderFuture.addListener({
-            // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(binding.joiningView.surfaceProvider)
-                }
-
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.LENS_FACING_FRONT
-
-            try {
-                // Unbind use cases before rebinding
-                cameraProvider.unbindAll()
-
-                // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
-                    viewLifecycleOwner, cameraSelector, preview)
-
-            } catch(exc: Exception) {
-                Log.e("TAG", "Use case binding failed", exc)
-            }
-
-        }, ContextCompat.getMainExecutor(baseContext))
+    // Thread control
+    private val backgroundThread: HandlerThread = HandlerThread("background")
+    private var backgroundHandler: Handler? = null
+    private fun initHandler() {
+        backgroundThread.start()
+        backgroundHandler = Handler(backgroundThread.looper)
     }
+
     override fun initView() {
+        initHandler()
         gazeTrackerManager = GazeTrackerManager.makeNewInstance(baseContext)
         changeFloatingActionButtonLayout(binding.btnWebcam, isMicEnabled)
         changeFloatingActionButtonLayout(binding.btnMic, isMicEnabled)
@@ -91,16 +67,25 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             gazeCallback,
             calibrationCallback,
             statusCallback,
-            userStatusCallback
+            userStatusCallback,
+            imageCallBack
         )
-        startCamera()
+        initGazeTracker()
+
     }
     private val gazeCallback = GazeCallback { gazeInfo ->
         if (isGazeTrackingStarting) {
             isGazeTrackingStarting = false
         }
         if (gazeTrackerManager?.isCalibrating() == false) {
+            Log.d("xxx", "gazeInfo.x ${gazeInfo.x} ${gazeInfo.y}")
 
+            runBlocking(Dispatchers.Main) {
+                binding.gazePointView.apply {
+                    x = gazeInfo.x
+                    y = gazeInfo.y
+                }
+            }
         }
     }
 
@@ -109,11 +94,37 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
 
         }
 
-        override fun onCalibrationNextPoint(fx: Float, fy: Float) {
-
+        override fun onCalibrationNextPoint(p0: Float, p1: Float) {
+            TODO("Not yet implemented")
         }
 
+
         override fun onCalibrationFinished(calibrationData: DoubleArray?) {
+        }
+    }
+    private val imageCallBack = ImageCallback { _, p1 ->
+        runBlocking (Dispatchers.Main) {
+            val out = ByteArrayOutputStream()
+            val yuvImage = YuvImage(p1, ImageFormat.NV21, 640, 480, null)
+            yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
+            val imageBytes: ByteArray = out.toByteArray()
+            val image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+
+
+            val width: Int = image.width
+            val height: Int = image.height
+            // calculate the scale - in this case = 0.4f
+            // calculate the scale - in this case = 0.4f
+            val scaleWidth = 480.toFloat() / width
+            val scaleHeight = 640.toFloat() / height
+            val matrix = Matrix()
+            matrix.postScale(scaleWidth, scaleHeight)
+            matrix.postRotate((-90).toFloat())
+
+            val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
+
+
+            binding.joiningView.setImageBitmap(resizedBitmap);
         }
     }
 
@@ -131,11 +142,9 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             isBlink: Boolean,
             eyeOpenness: Float
         ) {
-              Log.d("xxx", "isBlink $isBlink")
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
-            Log.d("xxx", "isDrowsiness $isDrowsiness")
 
         }
     }
@@ -172,7 +181,6 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
         ) {
             Toast.makeText(baseContext, "Error Occurred", Toast.LENGTH_LONG)
         }
-        initGazeTracker()
 
     }
     private fun initGazeTracker() {
@@ -250,7 +258,9 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
         changeFloatingActionButtonLayout(binding.btnWebcam, isWebcamEnabled)
     }
     private fun startTracking() {
-        gazeTrackerManager?.startGazeTracking()
+        backgroundHandler?.post {
+            gazeTrackerManager?.startGazeTracking()
+        }
         isGazeTrackingStarting = true
     }
 
@@ -260,30 +270,30 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
     private fun updateCameraView() {
         if (isWebcamEnabled) {
             // create PeerConnectionFactory
-            initializationOptions =
-                PeerConnectionFactory.InitializationOptions.builder(baseContext)
-                    .createInitializationOptions()
-            initializationOptions
-            PeerConnectionFactory.initialize(initializationOptions)
-            peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory()
-//            binding.joiningView.setMirror(true)
-            val surfaceTextureHelper =
-                SurfaceTextureHelper.create("CaptureThread", PeerConnectionUtils.getEglContext())
-
-            // create VideoCapturer
-            videoCapturer = createCameraCapturer()
-            videoSource = peerConnectionFactory!!.createVideoSource(videoCapturer!!.isScreencast)
-            videoCapturer?.initialize(
-                surfaceTextureHelper,
-                baseContext,
-                videoSource?.capturerObserver
-            )
-            gazeTrackerManager
-            videoCapturer?.startCapture(480, 640, 30)
-
-            // create VideoTrack
-            videoTrack = peerConnectionFactory!!.createVideoTrack("100", videoSource)
-
+//            initializationOptions =
+//                PeerConnectionFactory.InitializationOptions.builder(baseContext)
+//                    .createInitializationOptions()
+//            initializationOptions
+//            PeerConnectionFactory.initialize(initializationOptions)
+//            peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory()
+////            binding.joiningView.setMirror(true)
+//            val surfaceTextureHelper =
+//                SurfaceTextureHelper.create("CaptureThread", PeerConnectionUtils.getEglContext())
+//
+//            // create VideoCapturer
+//            videoCapturer = createCameraCapturer()
+//            videoSource = peerConnectionFactory!!.createVideoSource(videoCapturer!!.isScreencast)
+//            videoCapturer?.initialize(
+//                surfaceTextureHelper,
+//                baseContext,
+//                videoSource?.capturerObserver
+//            )
+//            gazeTrackerManager
+////            videoCapturer?.startCapture(480, 640, 30)
+//
+//            // create VideoTrack
+//            videoTrack = peerConnectionFactory!!.createVideoTrack("100", videoSource)
+//
             // display in localView
 //            binding.joiningView.addTrack(videoTrack)
         } else {
