@@ -9,12 +9,12 @@ data class BehaviourInfo(
     val isLookAway: Boolean? = false,
     val emotion: String? = null
 ){
-    @Exclude
-    fun toMap(): Map<String, Any?> {
-        return mapOf(
-            "isSleep" to isSleep,
-            "isLookAway" to isLookAway,
-            "emotion" to emotion
-        )
-    }
+//    @Exclude
+//    fun toMap(): Map<String, Any?> {
+//        return mapOf(
+//            "isSleep" to isSleep,
+//            "isLookAway" to isLookAway,
+//            "emotion" to emotion
+//        )
+//    }
 }

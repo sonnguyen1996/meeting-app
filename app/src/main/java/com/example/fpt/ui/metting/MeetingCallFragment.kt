@@ -7,6 +7,7 @@ import android.graphics.drawable.ColorDrawable
 import android.media.projection.MediaProjectionManager
 import android.os.*
 import android.util.DisplayMetrics
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -14,11 +15,16 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.activityViewModels
+import camp.visual.gazetracker.callback.CalibrationCallback
+import camp.visual.gazetracker.callback.ImageCallback
+import camp.visual.gazetracker.callback.InitializationCallback
+import camp.visual.gazetracker.callback.UserStatusCallback
 import com.demo.domain.domain.entities.ErrorResult
 import com.demo.domain.domain.response.MeetingInfo
 import com.example.demothesisfpteduvn.BuildConfig
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentMeetingCallBinding
+import com.example.fpt.classifer.GazeTrackerManager
 import com.example.fpt.ui.base.BaseFragment
 import com.example.fpt.ui.metting.ultils.Constant
 import com.example.fpt.ui.metting.ultils.HelperClass
@@ -33,6 +39,8 @@ import com.example.fpt.ui.adapter.MoreOptionsListAdapter
 import com.example.fpt.ui.adapter.ParticipantViewAdapter
 import com.example.fpt.ui.metting.ultils.ParticipantState
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import live.videosdk.rtc.android.lib.AppRTCAudioManager
 import live.videosdk.rtc.android.listeners.MeetingEventListener
 import live.videosdk.rtc.android.listeners.MicRequestListener
@@ -42,6 +50,7 @@ import live.videosdk.rtc.android.model.PubSubPublishOptions
 import org.json.JSONObject
 import org.webrtc.RendererCommon
 import org.webrtc.VideoTrack
+import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -54,7 +63,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private var micEnabled = true
 
-    private var webcamEnabled = true
+    private var webcamEnabled = false
 
     private var recording = false
 
@@ -80,6 +89,17 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     private val captureViewModel: CapturingViewModel by activityViewModels()
 
+    var isGazeTrackingStarting = false
+
+    var gazeTrackerFPS: Int = 30
+
+
+    private var gazeTrackerManager: GazeTrackerManager? = null
+
+    // Thread control
+    private val backgroundThread: HandlerThread = HandlerThread("background")
+    private var backgroundHandler: Handler? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (arguments != null) {
@@ -90,6 +110,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     override fun initView() {
         initMeeting()
+        gazeTrackerManager = GazeTrackerManager.makeNewInstance(baseContext)
+
         viewAdapter = meeting?.let {
             ParticipantViewAdapter(
                 childFragmentManager,
@@ -104,6 +126,12 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
         recordingStatusSnackbar?.isGestureInsetBottomIgnored = true
 
+        initHandler()
+        gazeTrackerManager?.setGazeTrackerCallbacks(
+            calibrationCallback,
+            userStatusCallback,
+            imageCallBack
+        )
     }
 
 
@@ -120,6 +148,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val startTime = startMeetingDate?.time ?: 0
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
+            startTracking()
             captureViewModel.startObserver(initialValue, meeting)
         }
 
@@ -207,6 +236,27 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         activity?.window?.decorView?.rootView?.let { HelperClass.showProgress(it) }
         meeting?.join()
     }
+    private fun initHandler() {
+        backgroundThread.start()
+        backgroundHandler = Handler(backgroundThread.looper)
+    }
+
+    private fun initGazeTracker() {
+        gazeTrackerManager?.initGazeTracker(initializationCallback, true)
+
+        // You can also set FPS of gazeTracker if you want
+        gazeTrackerManager?.setGazeTrackingFps(gazeTrackerFPS)
+    }
+
+    private val initializationCallback = // Note: for understanding, left as function here
+        // you can change this to lambda
+        InitializationCallback { gazeTracker, error ->
+
+            runBlocking (Dispatchers.Main) {
+                Log.d("xxx","${gazeTracker !== null}")
+            }
+
+        }
 
     private fun setActionListeners() {
         // Toggle mic
@@ -220,13 +270,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         binding.btnLeave.setOnClickListener { showLeaveOrEndDialog() }
         binding.btnMore.setOnClickListener { showMoreOptionsDialog() }
         binding.btnSwitchCameraMode.setOnClickListener { meeting?.changeWebcam() }
-
-        // Chat
-        binding.btnChat.setOnClickListener {
-            if (meeting != null) {
-                openChat()
-            }
-        }
     }
 
     private fun showMoreOptionsDialog() {
@@ -459,124 +502,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         alertDialog.show()
     }
 
-    fun openChat() {
-//        val messageRcv: RecyclerView
-//        val close: ImageView
-//        bottomSheetDialog = BottomSheetDialog(this)
-//        val v3 = LayoutInflater.from(baseContext)
-//            .inflate(
-//               R.layout.activity_chat,
-//                findViewById(live.videosdk.rtc.android.R.id.layout_chat)
-//            )
-//        bottomSheetDialog?.setContentView(v3)
-//        messageRcv = v3.findViewById(live.videosdk.rtc.android.R.id.messageRcv)
-//        messageRcv.layoutManager = LinearLayoutManager(applicationContext)
-//        val lp = RelativeLayout.LayoutParams(
-//            RelativeLayout.LayoutParams.MATCH_PARENT,
-//            getWindowHeight() / 2
-//        )
-//        messageRcv.layoutParams = lp
-//        val mBottomSheetCallback: BottomSheetBehavior.BottomSheetCallback =
-//            object : BottomSheetBehavior.BottomSheetCallback() {
-//                override fun onStateChanged(
-//                    bottomSheet: View,
-//                    @BottomSheetBehavior.State newState: Int
-//                ) {
-//                    if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
-//                        val lp = RelativeLayout.LayoutParams(
-//                            RelativeLayout.LayoutParams.MATCH_PARENT,
-//                            getWindowHeight() / 2
-//                        )
-//                        messageRcv.layoutParams = lp
-//                    } else if (newState == BottomSheetBehavior.STATE_EXPANDED) {
-//                        val lp = RelativeLayout.LayoutParams(
-//                            RelativeLayout.LayoutParams.MATCH_PARENT,
-//                            RelativeLayout.LayoutParams.MATCH_PARENT
-//                        )
-//                        messageRcv.layoutParams = lp
-//                    }
-//                }
-//
-//                override fun onSlide(bottomSheet: View, slideOffset: Float) {}
-//            }
-//        bottomSheetDialog?.behavior.addBottomSheetCallback(mBottomSheetCallback)
-//        etmessage = v3.findViewById(live.videosdk.rtc.android.R.id.etMessage)
-//        etmessage?.setOnTouchListener { view, event ->
-//            if (view.id == live.videosdk.rtc.android.R.id.etMessage) {
-//                view.parent.requestDisallowInterceptTouchEvent(true)
-//                when (event.action and MotionEvent.ACTION_MASK) {
-//                    MotionEvent.ACTION_UP -> view.parent.requestDisallowInterceptTouchEvent(false)
-//                }
-//            }
-//            false
-//        }
-//        val btnSend = v3.findViewById<ImageButton>(live.videosdk.rtc.android.R.id.btnSend)
-//        btnSend.isEnabled = false
-//        etmessage?.onFocusChangeListener = OnFocusChangeListener { _, hasFocus ->
-//            if (hasFocus) {
-//                etmessage?.hint = ""
-//            }
-//        }
-//        etmessage?.isVerticalScrollBarEnabled = true
-//        etmessage?.isScrollbarFadingEnabled = false
-//        etmessage?.addTextChangedListener(object : TextWatcher {
-//            override fun beforeTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {}
-//            override fun onTextChanged(charSequence: CharSequence, i: Int, i1: Int, i2: Int) {
-//                if (etmessage?.text.toString().trim { it <= ' ' }.isNotEmpty()) {
-//                    btnSend.isEnabled = true
-//                    btnSend.isSelected = true
-//                } else {
-//                    btnSend.isEnabled = false
-//                    btnSend.isSelected = false
-//                }
-//            }
-//
-//            override fun afterTextChanged(editable: Editable) {}
-//        })
-//
-//        //
-//        pubSubMessageListener = PubSubMessageListener { message ->
-//            messageAdapter?.addItem(message)
-//            messageRcv.scrollToPosition(messageAdapter?.itemCount - 1)
-//        }
-//
-//        // Subscribe for 'CHAT' topic
-//        val pubSubMessageList = meeting?.pubSub.subscribe("CHAT", pubSubMessageListener)
-//
-//        //
-//        messageAdapter =
-//            MessageAdapter(this, pubSubMessageList, meeting?)
-//        messageRcv.adapter = messageAdapter
-//        messageRcv.addOnLayoutChangeListener { _: View?, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int, _: Int ->
-//            messageRcv.scrollToPosition(
-//                messageAdapter?.itemCount - 1
-//            )
-//        }
-//        v3.findViewById<View>(live.videosdk.rtc.android.R.id.btnSend).setOnClickListener {
-//            val message: String = etmessage?.text.toString()
-//            if (message != "") {
-//                val publishOptions = PubSubPublishOptions()
-//                publishOptions.isPersist = true
-//                meeting?.pubSub.publish("CHAT", message, publishOptions)
-//                etmessage?.setText("")
-//            } else {
-//                Toast.makeText(
-//                    this@GroupCallActivity, "Please Enter Message",
-//                    Toast.LENGTH_SHORT
-//                ).show()
-//            }
-//        }
-//        close = v3.findViewById(live.videosdk.rtc.android.R.id.ic_close)
-//        bottomSheetDialog?.show()
-//        close.setOnClickListener { bottomSheetDialog?.dismiss() }
-//        bottomSheetDialog?.setOnDismissListener {
-//            meeting?.pubSub.unsubscribe(
-//                "CHAT",
-//                pubSubMessageListener
-//            )
-//        }
-    }
-
     private fun toggleMic() {
         if (micEnabled) {
             meeting?.muteMic()
@@ -672,6 +597,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     private val meetingEventListener: MeetingEventListener = object : MeetingEventListener() {
         override fun onMeetingJoined() {
             if (meeting != null) {
+                meeting?.disableWebcam()
                 //hide progress when meetingJoined
                 activity?.window?.decorView?.rootView?.let { HelperClass.hideProgress(it) }
                 toggleMicIcon()
@@ -679,63 +605,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 setLocalListeners()
                 meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
             }
-
+            initGazeTracker()
             binding.viewPagerVideoGrid.offscreenPageLimit = 1
             binding.viewPagerVideoGrid.adapter = viewAdapter
-//                raiseHandListener =
-//                    PubSubMessageListener { pubSubMessage ->
-//                        val parentLayout = findViewById<View>(android.R.id.content)
-//                        var snackbar: Snackbar
-//                        if ((pubSubMessage.senderId == meeting?.localParticipant.id)) {
-//                            snackbar = Snackbar.make(
-//                                parentLayout,
-//                                "You raised hand",
-//                                Snackbar.LENGTH_SHORT
-//                            )
-//                        } else {
-//                            snackbar = Snackbar.make(
-//                                parentLayout,
-//                                pubSubMessage.senderName + " raised hand  ",
-//                                Snackbar.LENGTH_LONG
-//                            )
-//                        }
-//
-//                        val snackbarLayout = snackbar.view
-//                        val snackbarTextId = com.google.android.material.R.id.snackbar_text
-//                        val textView = snackbarLayout.findViewById<View>(snackbarTextId) as TextView
-//
-//                        val drawable =
-//                            resources.getDrawable(live.videosdk.rtc.android.R.drawable.ic_raise_hand)
-//                        drawable.setBounds(0, 0, 50, 65)
-//                        textView.setCompoundDrawablesRelative(drawable, null, null, null)
-//                        textView.compoundDrawablePadding = 15
-//                        HelperClass.setSnackBarStyle(snackbar.view, 0)
-//                        snackbar.isGestureInsetBottomIgnored = true
-//                        snackbar.view.setOnClickListener { snackbar.dismiss() }
-//                        snackbar.show()
-//                    }
-//
-//                // notify user for raise hand
-//                meeting?.pubSub.subscribe("RAISE_HAND", raiseHandListener)
-//                chatListener = PubSubMessageListener { pubSubMessage ->
-//                    if (pubSubMessage.senderId != meeting?.localParticipant.id) {
-//                        val parentLayout = findViewById<View>(android.R.id.content)
-//                        val snackbar = Snackbar.make(
-//                            parentLayout, (pubSubMessage.senderName + " says: " +
-//                                    pubSubMessage.message), Snackbar.LENGTH_SHORT
-//                        )
-//                            .setDuration(2000)
-//                        val snackbarView = snackbar.view
-//                        HelperClass.setSnackBarStyle(snackbarView, 0)
-//                        snackbar.view.setOnClickListener { snackbar.dismiss() }
-//                        snackbar.show()
-//                    }
-//                }
-//                // notify user of any new messages
-//                meeting?.pubSub.subscribe("CHAT", chatListener)
-//
-//
-//            }
         }
 
         override fun onMeetingLeft() {
@@ -826,7 +698,63 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             showWebcamRequestDialog(listener)
         }
     }
+    private fun startTracking() {
+        backgroundHandler?.post {
+            gazeTrackerManager?.startGazeTracking()
+        }
+        isGazeTrackingStarting = true
+    }
 
+
+    private val calibrationCallback = object : CalibrationCallback {
+        override fun onCalibrationProgress(progress: Float) {
+
+        }
+
+        override fun onCalibrationNextPoint(p0: Float, p1: Float) {
+            TODO("Not yet implemented")
+        }
+
+
+        override fun onCalibrationFinished(calibrationData: DoubleArray?) {
+        }
+    }
+    private val imageCallBack = ImageCallback { _, p1 ->
+        runBlocking(Dispatchers.Main) {
+            val out = ByteArrayOutputStream()
+            val yuvImage = YuvImage(p1, ImageFormat.NV21, 640, 480, null)
+            yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
+            val imageBytes: ByteArray = out.toByteArray()
+            val image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            val width: Int = image.width
+            val height: Int = image.height
+            val matrix = Matrix()
+            matrix.postRotate((-90).toFloat())
+
+            val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
+            captureViewModel.listCaptureImage.add(resizedBitmap)
+        }
+    }
+
+    private val userStatusCallback = object : UserStatusCallback {
+        override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
+            captureViewModel.recentAttentionScore = (score * 100).toInt()
+            captureViewModel.processImage()
+        }
+
+        override fun onBlink(
+            timestamp: Long,
+            isBlinkLeft: Boolean,
+            isBlinkRight: Boolean,
+            isBlink: Boolean,
+            eyeOpenness: Float
+        ) {
+        }
+
+        override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
+
+        }
+    }
     private fun updatePresenter(participantId: String?) {
         if (participantId == null) {
             binding.shareView.visibility = View.GONE

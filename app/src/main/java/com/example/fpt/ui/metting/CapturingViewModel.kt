@@ -1,11 +1,10 @@
 package com.example.fpt.ui.metting
 
+import android.R.attr.bitmap
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.demo.domain.domain.entities.BehaviourInfo
-import com.demo.domain.domain.response.RoomResponse
-import com.demo.domain.domain.response.SessionResponse
 import com.example.fpt.ui.base.BaseViewModel
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ktx.database
@@ -21,15 +20,16 @@ import kotlinx.coroutines.launch
 import live.videosdk.rtc.android.Meeting
 import java.util.*
 
+
 class CapturingViewModel : BaseViewModel() {
 
     var detector: FaceDetector? = null
 
-    var listDetection: List<BehaviourInfo>? = null
+    var listCaptureImage = mutableListOf<Bitmap>()
 
     private var database: DatabaseReference
 
-    var isCollectDone = false
+    var recentAttentionScore: Int = 0
 
     init {
         val options = FaceDetectorOptions.Builder()
@@ -44,37 +44,32 @@ class CapturingViewModel : BaseViewModel() {
         database = Firebase.database.reference
     }
 
-    fun processImage(image: Bitmap, meetingInfo: Meeting) {
-        val firebaseVisionImage = InputImage.fromBitmap(image, 0)
+    fun processImage() {
+        listCaptureImage.forEach { captureImage ->
+            val firebaseVisionImage = InputImage.fromBitmap(captureImage, 0)
+            val faceBoundingBox = detector?.process(firebaseVisionImage)
+                ?.result?.first()?.boundingBox
+            val croppedBitmap = Bitmap.createBitmap(
+                captureImage,
+                faceBoundingBox?.left ?: 0,
+                faceBoundingBox?.right ?: 0,
+                faceBoundingBox?.width() ?: 0,
+                faceBoundingBox?.height() ?: 0
+            )
+        }
 
-        detector?.process(firebaseVisionImage)
-            ?.addOnCompleteListener {
-                if (it.isComplete) {
-                    if (!it.result.isNullOrEmpty()) {
-                        processFace(it.result)
-                    } else {
-                        val behaviourInfo = BehaviourInfo(
-                            isSleep = false,
-                            isLookAway = true,
-                            emotion = "Unidentified"
-                        )
-                        updateValue(meetingInfo, behaviourInfo)
-                    }
-                }
-            }
-            ?.addOnFailureListener {
-                Log.d("xxx", "exception $it")
-            }
 
     }
 
     private fun processFace(faces: List<Face>) {
-//        val listBehaviourInfo  = faces.map {
-//            return BehaviourInfo().toMap()
-//        }
-//        for (face in faces) {
-//
-//        }
+
+        Log.d("xxx", faces.size.toString())
+
+        for (face in faces) {
+            Log.d("xxx", face.boundingBox.flattenToString())
+            Log.d("xxx", face.boundingBox.toString())
+
+        }
     }
 
     private fun insertSessionUser(meeting: Meeting?) {
@@ -95,15 +90,15 @@ class CapturingViewModel : BaseViewModel() {
     }
 
     private fun updateValue(meeting: Meeting?, behaviourInfo: BehaviourInfo) {
-        database.child("roomSession").child(meeting?.meetingId ?: "")
-            .child(meeting?.localParticipant?.id ?: "")
-            .updateChildren(behaviourInfo.toMap())
-            .addOnSuccessListener {
-                isCollectDone = true
-            }
-            .addOnFailureListener {
-                Log.d("xxx", "database addOnFailureListener")
-            }
+//        database.child("roomSession").child(meeting?.meetingId ?: "")
+//            .child(meeting?.localParticipant?.id ?: "")
+////            .updateChildren(behaviourInfo.toMap())
+//            .addOnSuccessListener {
+//                isCollectDone = true
+//            }
+//            .addOnFailureListener {
+//                Log.d("xxx", "database addOnFailureListener")
+//            }
     }
 
     private var meetingSeconds = 0
@@ -128,10 +123,6 @@ class CapturingViewModel : BaseViewModel() {
                 "%02d:%02d:%02d", hours,
                 minutes, secs
             )
-            updateTimeMeeting.postValue(time)
-            if (secs % 20 == 0) {
-                executeCaptureImage.postValue(true)
-            }
             meetingSeconds++
             delay(1000)
         }
