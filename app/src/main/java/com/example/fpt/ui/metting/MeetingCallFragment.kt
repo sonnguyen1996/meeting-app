@@ -132,6 +132,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             userStatusCallback,
             imageCallBack
         )
+        initGazeTracker()
     }
 
 
@@ -235,6 +236,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         )
         activity?.window?.decorView?.rootView?.let { HelperClass.showProgress(it) }
         meeting?.join()
+        meeting?.disableWebcam()
     }
     private fun initHandler() {
         backgroundThread.start()
@@ -264,7 +266,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         binding.btnMic.setOnClickListener { toggleMic() }
 
         // Toggle webcam
-        binding.btnWebcam.setOnClickListener { toggleWebCam() }
+//        binding.btnWebcam.setOnClickListener { toggleWebCam() }
 
         // Leave meeting
         binding.btnLeave.setOnClickListener { showLeaveOrEndDialog() }
@@ -605,7 +607,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                 setLocalListeners()
                 meetingInfo?.meetingId?.let { viewModel.fetchMeetingTime(it) }
             }
-            initGazeTracker()
             binding.viewPagerVideoGrid.offscreenPageLimit = 1
             binding.viewPagerVideoGrid.adapter = viewAdapter
         }
@@ -665,29 +666,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
         override fun onSpeakerChanged(participantId: String?) {}
         override fun onMeetingStateChanged(state: String) {
-//            if (state === "FAILED") {
-//                val parentLayout = findViewById<View>(android.R.id.content)
-//                val builderTextLeft = SpannableStringBuilder()
-//                builderTextLeft.append("   Call disconnected. Reconnecting...")
-//                builderTextLeft.setSpan(
-//                    context?.let {
-//                        ImageSpan(
-//                            it,
-//                            R.drawable.ic_call_disconnected
-//                        )
-//                    }, 0, 1, 0
-//                )
-//                val snackbar = Snackbar.make(binding.conte, builderTextLeft, Snackbar.LENGTH_LONG)
-//                HelperClass.setSnackBarStyle(
-//                    snackbar.view,
-//                    resources.getColor(R.color.md_red_400)
-//                )
-//                snackbar.view.setOnClickListener { snackbar.dismiss() }
-//                snackbar.show()
-//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                    if (handler.hasCallbacks((runnable)?)) handler.removeCallbacks((runnable)?)
-//                }
-//            }
         }
 
         override fun onMicRequested(participantId: String, listener: MicRequestListener) {
@@ -719,7 +697,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         override fun onCalibrationFinished(calibrationData: DoubleArray?) {
         }
     }
-    private val imageCallBack = ImageCallback { _, p1 ->
+    private val imageCallBack = ImageCallback { p, p1 ->
         runBlocking(Dispatchers.Main) {
             val out = ByteArrayOutputStream()
             val yuvImage = YuvImage(p1, ImageFormat.NV21, 640, 480, null)
@@ -733,13 +711,16 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
             val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
             captureViewModel.listCaptureImage.add(resizedBitmap)
+            counter++
+            Log.d("xxx","counter $counter vs ${ (System.currentTimeMillis() - p)/1000}")
         }
     }
-
+   var counter = 0;
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             captureViewModel.recentAttentionScore = (score * 100).toInt()
             captureViewModel.processImage()
+            counter = 0
         }
 
         override fun onBlink(
@@ -752,6 +733,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
+            Log.d("xxx","${isDrowsiness}")
 
         }
     }
