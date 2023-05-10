@@ -1,10 +1,12 @@
 package com.example.fpt.ui.login
 
+import android.os.Looper
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentLoginBinding
 import com.example.fpt.ui.base.BaseFragment
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.logging.Handler
 
 @AndroidEntryPoint
 class LoginFragment : BaseFragment<LoginViewModel, FragmentLoginBinding>() {
@@ -23,7 +25,9 @@ class LoginFragment : BaseFragment<LoginViewModel, FragmentLoginBinding>() {
     override fun initActions() {
         binding.testButton.setOnClickListener {
             binding.testButton.startAnimation()
-            navigate(R.id.action_loginFragment_to_engagementVisuallyFragment)
+            android.os.Handler(Looper.getMainLooper()).postDelayed({
+                navigate(R.id.action_loginFragment_to_engagementVisuallyFragment)
+            }, 1000)
         }
     }
 

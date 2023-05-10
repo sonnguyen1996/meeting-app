@@ -52,7 +52,6 @@ class EngagementVisuallyFragment :
             userStatusCallback,
             imageCallBack
         )
-        initGazeTracker()
     }
 
     override fun initData() {
@@ -70,8 +69,13 @@ class EngagementVisuallyFragment :
         // you can change this to lambda
         InitializationCallback { gazeTracker, error ->
              Log.d("xxx",error.toString())
-//            binding.startCapture.stopAnimation()
-//            updateViewState()
+            runBlocking(Dispatchers.Main) {
+                binding.startCapture.revertAnimation {
+                    binding.startCapture.text = "Stop"
+                }
+            }
+            startTracking()
+            updateViewState()
         }
 
     private fun startTracking() {
@@ -94,8 +98,7 @@ class EngagementVisuallyFragment :
     override fun initActions() {
         binding.startCapture.setOnClickListener {
             binding.startCapture.startAnimation()
-            startTracking()
-            updateViewState()
+            initGazeTracker()
         }
     }
 
@@ -127,7 +130,7 @@ class EngagementVisuallyFragment :
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            binding.attentionScore.text = (score * 100).toInt().toString()
+            binding.attentionScore.text = "${(score * 100).toInt()}%"
         }
 
         override fun onBlink(
@@ -137,11 +140,12 @@ class EngagementVisuallyFragment :
             isBlink: Boolean,
             eyeOpenness: Float
         ) {
-            binding.blinkState.text = if (isBlink) "X_x" else "0_0"
+            binding.blinkState.text = if (isBlink) "X_X" else "0_0"
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
-            binding.sleepyState.text = if (isSleepy) "yes.." else "NO!"
+
+            binding.sleepyState.text = if (isDrowsiness) "yes.." else "NO!"
         }
     }
 
@@ -156,7 +160,7 @@ class EngagementVisuallyFragment :
             val height: Int = image.height
             val matrix = Matrix()
             matrix.postRotate((-90).toFloat())
-
+            matrix.postScale(-1f, 1f, width / 2f, height / 2f)
             val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
             binding.imageView.setImageBitmap(resizedBitmap)
         }
