@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/content_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginVertical="16dp"
+                    app:cardCornerRadius="8dp">
+
+                    <ImageView
+                        android:id="@+id/imageView"
+                        android:layout_width="match_parent"
+                        android:layout_height="350dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_launcher_background" />
+
+                </androidx.cardview.widget.CardView>
+
+                <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                    android:id="@+id/startCapture"
+                    style="@style/testButton"
+                    android:layout_gravity="center_horizontal"
+                    android:text="Start"
+                    app:initialCornerAngle="27dp"
+                    app:spinning_bar_color="#FFF"
+                    app:spinning_bar_padding="6dp"
+                    app:spinning_bar_width="4dp" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingHorizontal="30dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent">
+
+
+                    <TextView
+                        android:id="@+id/attention_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="15dp"
+
+                        android:text="Attention score of recent 30s"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator1"
+                        app:layout_constraintEnd_toStartOf="@id/attention_score"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/attention_score"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="30%"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toBottomOf="@id/user_option_separator1"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <View
+                        android:id="@+id/user_option_separator1"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="#F5F5F5"
+                        app:layout_constraintTop_toBottomOf="@id/attention_text" />
+
+                    <TextView
+                        android:id="@+id/blink_state_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="10dp"
+                        android:text="Blink State"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator2"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator1" />
+
+                    <TextView
+                        android:id="@+id/blink_state"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="ㅇ_ㅇ"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator2"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator1" />
+
+                    <View
+                        android:id="@+id/user_option_separator2"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="#F5F5F5"
+                        app:layout_constraintTop_toBottomOf="@id/blink_state_text" />
+
+                    <TextView
+                        android:id="@+id/sleepy_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="10dp"
+                        android:text="Do I look seepy now?"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator3"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator2" />
+
+                    <TextView
+                        android:id="@+id/sleepy_state"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="nope"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator3"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator2" />
+
+                    <View
+                        android:id="@+id/user_option_separator3"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="#F5F5F5"
+                        app:layout_constraintTop_toBottomOf="@id/sleepy_text" />
+
+                    <TextView
+                        android:id="@+id/emotion_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="10dp"
+                        android:text="Emotion State"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator4"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator3" />
+
+                    <TextView
+                        android:id="@+id/emotion_state"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="nope"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toTopOf="@id/user_option_separator4"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator3" />
+
+                    <View
+                        android:id="@+id/user_option_separator4"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="#F5F5F5"
+                        app:layout_constraintTop_toBottomOf="@id/emotion_text" />
+
+                    <TextView
+                        android:id="@+id/engagement_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="10dp"
+                        android:text="Engagement Level"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/user_option_separator4" />
+
+                    <TextView
+                        android:id="@+id/engagement_state"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:text="nope"
+                        android:textColor="#1D1D1D"
+                        android:textSize="17sp"
+                        app:layout_constraintBottom_toBottomOf="@id/engagement_text"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@id/engagement_text" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </LinearLayout>
+
+
+        </androidx.core.widget.NestedScrollView>
+
+        <FrameLayout
+            android:id="@+id/gaze_point_view_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.mikhaellopez.circleview.CircleView
+                android:id="@+id/gaze_point_view"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="40dp"
+                app:cv_color="@android:color/holo_red_dark" />
+        </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

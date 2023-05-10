@@ -3,7 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/home_nav_graph"
-    app:startDestination="@id/createMeetingFragment">
+    app:startDestination="@id/loginFragment">
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.fpt.ui.login.LoginFragment"
+        tools:layout="@layout/fragment_login"
+        android:label="LoginFragment" >
+
+        <action
+            android:id="@+id/action_loginFragment_to_createMeetingFragment"
+            app:destination="@id/createMeetingFragment" />
+        <action
+            android:id="@+id/action_loginFragment_to_engagementVisuallyFragment"
+            app:destination="@id/engagementVisuallyFragment" />
+    </fragment>
+
     <fragment
         android:id="@+id/createMeetingFragment"
         android:name="com.example.fpt.ui.metting.CreateMeetingFragment"
@@ -13,9 +27,17 @@
             android:id="@+id/action_createMeetingFragment_to_meetingCallFragment"
             app:destination="@id/meetingCallFragment" />
     </fragment>
+
     <fragment
         android:id="@+id/meetingCallFragment"
         android:name="com.example.fpt.ui.metting.MeetingCallFragment"
         android:label="MeetingCallFragment"
         tools:layout="@layout/fragment_meeting_call"/>
+    <fragment
+        android:id="@+id/engagementVisuallyFragment"
+        android:name="com.example.fpt.ui.login.EngagementVisuallyFragment"
+        tools:layout="@layout/fragment_engagement_visually"
+        android:label="EngagementVisuallyFragment" />
+
+
 </navigation>

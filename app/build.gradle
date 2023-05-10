@@ -108,6 +108,7 @@ dependencies {
 
     //third party
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.22'
+    implementation 'br.com.simplepass:loading-button-android:1.14.0'
 
 }
 kapt {
