@@ -1,7 +1,6 @@
 package com.example.fpt.ui.metting
 
 import android.app.Application
-import android.content.Context
 import android.graphics.*
 import android.os.SystemClock
 import android.util.Log
@@ -11,10 +10,8 @@ import com.demo.domain.domain.entities.BehaviourInfo
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.fpt.classifer.ClassifierResult
 import com.example.fpt.classifer.EmotionTfLiteClassifier
-import com.example.fpt.classifer.TfLiteClassifier
 import com.example.fpt.mtcnn.Box
 import com.example.fpt.mtcnn.MTCNN
-import com.example.fpt.ui.base.BaseViewModel
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
@@ -22,6 +19,7 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetector
 import kotlinx.coroutines.*
 import live.videosdk.rtc.android.Meeting
+import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -51,7 +49,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         coroutineContext.cancel()
     }
 
-    val heavyTaskScope by lazy { CoroutineScope(heavyJob + Dispatchers.IO + exceptionHandler) }
+    val heavyTaskScope by lazy { CoroutineScope(heavyJob + Dispatchers.Main + exceptionHandler) }
 
     init {
 //        val options = FaceDetectorOptions.Builder()
@@ -71,40 +69,79 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
     fun processImage() {
         val processList = listCaptureImage.takeLast(10)
         processList.forEach { captureImage ->
-            mtcnnDetectionAndAttributesRecognition(captureImage)
+//            mtcnnDetectionAndAttributesRecognition(captureImage)
         }
         listCaptureImage.clear()
     }
 
-    private fun mtcnnDetectionAndAttributesRecognition(sampledImage: Bitmap) {
-        val bmp: Bitmap = sampledImage
-        var resizedBitmap = bmp
+    fun processDetectFace(bitmap: ByteArray) : Bitmap?{
+        val captureBitmap =  convertBitmap(bitmap)
+        val processedBitmap = mtcnnDetectionAndAttributesRecognition(captureBitmap)
+        return processedBitmap
+    }
+
+    private fun convertBitmap(bitmap: ByteArray): Bitmap {
+        val out = ByteArrayOutputStream()
+        val yuvImage = YuvImage(bitmap, ImageFormat.NV21, 640, 480, null)
+        yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
+        val imageBytes: ByteArray = out.toByteArray()
+        val image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        val width: Int = image.width
+        val height: Int = image.height
+        val matrix = Matrix()
+        matrix.postRotate((-90).toFloat())
+        matrix.postScale(-1f, 1f, width / 2f, height / 2f)
+        return Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
+    }
+
+    private fun mtcnnDetectionAndAttributesRecognition(bitmap : Bitmap): Bitmap? {
+        var resizedBitmap = bitmap
         val minSize = 600.0
-        val scale = min(bmp.width, bmp.height) / minSize
+        val scale = min(bitmap.width, bitmap.height) / minSize
         if (scale > 1.0) {
             resizedBitmap = Bitmap.createScaledBitmap(
-                bmp,
-                (bmp.width / scale).toInt(),
-                (bmp.height / scale).toInt(),
+                bitmap,
+                (bitmap.width / scale).toInt(),
+                (bitmap.height / scale).toInt(),
                 false
             )
             //bmp=resizedBitmap;
         }
+
         val startTime = SystemClock.uptimeMillis()
         val bboxes: Vector<Box> = mtcnnFaceDetector!!.detectFaces(
             resizedBitmap,
             minFaceSize
-        ) //(int)(bmp.getWidth()*MIN_FACE_SIZE));
+        )
+
         Log.i(
             "xxx",
             "Timecost to run mtcnn: " + (SystemClock.uptimeMillis() - startTime).toString()
         )
+        val tempBmp =
+            Bitmap.createBitmap(resizedBitmap.width, resizedBitmap.height, Bitmap.Config.ARGB_8888)
+        val c = Canvas(tempBmp)
+        val p = Paint()
+        p.style = Paint.Style.STROKE
+        p.isAntiAlias = true
+        p.isFilterBitmap = true
+        p.isDither = true
+        p.color = Color.BLUE
+        p.strokeWidth = 5f
+        val p_text = Paint()
+        p_text.color = Color.WHITE
+        p_text.style = Paint.Style.FILL
+        p_text.color = Color.BLUE
+        p_text.textSize = 24f
+        c.drawBitmap(resizedBitmap, 0f, 0f, null)
         for (box in bboxes) {
+            p.color = Color.RED
             val bbox: Rect =
                 box.transform2Rect() //new android.graphics.Rect(Math.max(0,box.left()),Math.max(0,box.top()),box.right(),box.bottom());
+            c.drawRect(bbox, p)
             if (emotionClassifierTfLite != null && bbox.width() > 0 && bbox.height() > 0) {
-                val w = bmp.width
-                val h = bmp.height
+                val w = bitmap.width
+                val h = bitmap.height
                 val bboxOrig = Rect(
                     max(0, w * bbox.left / resizedBitmap.width),
                     max(0, h * bbox.top / resizedBitmap.height),
@@ -112,7 +149,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
                     min(h, h * bbox.bottom / resizedBitmap.height)
                 )
                 val faceBitmap = Bitmap.createBitmap(
-                    bmp,
+                    bitmap,
                     bboxOrig.left,
                     bboxOrig.top,
                     bboxOrig.width(),
@@ -124,11 +161,18 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
                     emotionClassifierTfLite!!.getImageSizeY(),
                     false
                 )
-                val res = emotionClassifierTfLite?.classifyFrame(resultBitmap)
-                Log.i("xxx", res.toString())
+                val res: ClassifierResult = emotionClassifierTfLite?.classifyFrame(resultBitmap)!!
+                c.drawText(
+                    res.toString(),
+                    max(0, bbox.left).toFloat(),
+                    max(0, bbox.top - 20).toFloat(),
+                    p_text
+                )
             }
         }
+        return tempBmp
     }
+
 
 
     private fun processFace(faces: List<Face>) {

@@ -719,7 +719,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             captureViewModel.recentAttentionScore = (score * 100).toInt()
-            captureViewModel.processImage()
             counter = 0
         }
 

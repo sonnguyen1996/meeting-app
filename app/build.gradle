@@ -110,6 +110,9 @@ dependencies {
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.22'
     implementation 'br.com.simplepass:loading-button-android:1.14.0'
 
+    // Artifact containing all APIs and implementations
+    implementation "org.jetbrains.kotlinx:dataframe-core:0.10.0"
+
 }
 kapt {
     correctErrorTypes true

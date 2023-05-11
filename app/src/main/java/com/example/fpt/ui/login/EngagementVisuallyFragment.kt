@@ -1,27 +1,35 @@
 package com.example.fpt.ui.login
 
 import android.graphics.*
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.View
+import androidx.fragment.app.activityViewModels
 import camp.visual.gazetracker.callback.*
-import camp.visual.gazetracker.gaze.GazeInfo
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentEngagementVisuallyBinding
+import com.example.fpt.classifer.EmotionTfLiteClassifier
 import com.example.fpt.classifer.GazeTrackerManager
-import com.example.fpt.classifer.SeeSoInitializeState
+import com.example.fpt.mtcnn.MTCNN
 import com.example.fpt.ui.base.BaseFragment
+import com.example.fpt.ui.metting.CapturingViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import java.io.ByteArrayOutputStream
+import org.jetbrains.kotlinx.dataframe.api.*
+import java.time.Instant
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class EngagementVisuallyFragment :
     BaseFragment<LoginViewModel, FragmentEngagementVisuallyBinding>() {
+
+    private var emotionClassifierTfLite: EmotionTfLiteClassifier? = null
 
     private var gazeTrackerManager: GazeTrackerManager? = null
 
@@ -29,22 +37,25 @@ class EngagementVisuallyFragment :
 
     var gazeTrackerFPS: Int = 30
 
-    // SeeSo UserStatus
+    private val captureViewModel: CapturingViewModel by activityViewModels()
 
-    var blinked = false
-
-    var isSleepy = false
 
     private val backgroundThread: HandlerThread = HandlerThread("background")
 
     private var backgroundHandler: Handler? = null
 
+    private var mtcnnFaceDetector: MTCNN? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        emotionClassifierTfLite = EmotionTfLiteClassifier(baseContext)
+        mtcnnFaceDetector = MTCNN(baseContext)
+
     }
 
     override fun initView() {
         gazeTrackerManager = GazeTrackerManager.makeNewInstance(baseContext)
+
         initHandler()
         gazeTrackerManager?.setGazeTrackerCallbacks(
             gazeCallback,
@@ -67,8 +78,8 @@ class EngagementVisuallyFragment :
 
     private val initializationCallback = // Note: for understanding, left as function here
         // you can change this to lambda
-        InitializationCallback { gazeTracker, error ->
-             Log.d("xxx",error.toString())
+        InitializationCallback { _, error ->
+            Log.d("xxx", error.toString())
             runBlocking(Dispatchers.Main) {
                 binding.startCapture.revertAnimation {
                     binding.startCapture.text = "Stop"
@@ -103,7 +114,6 @@ class EngagementVisuallyFragment :
     }
 
     private fun updateViewState() {
-
         // ------ tracking ------ //
         binding.gazePointView.apply {
             pivotX = (width / 2).toFloat()
@@ -121,7 +131,6 @@ class EngagementVisuallyFragment :
         }
 
         override fun onCalibrationNextPoint(p0: Float, p1: Float) {
-            TODO("Not yet implemented")
         }
 
 
@@ -131,6 +140,7 @@ class EngagementVisuallyFragment :
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             binding.attentionScore.text = "${(score * 100).toInt()}%"
+            Log.d("xxx", "end ${timestampEnd}")
         }
 
         override fun onBlink(
@@ -144,26 +154,17 @@ class EngagementVisuallyFragment :
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
+            Log.d("xxx", "onDrowsiness ${timestamp}")
 
             binding.sleepyState.text = if (isDrowsiness) "yes.." else "NO!"
         }
     }
 
-    private val imageCallBack = ImageCallback { p, p1 ->
-        runBlocking(Dispatchers.Main) {
-            val out = ByteArrayOutputStream()
-            val yuvImage = YuvImage(p1, ImageFormat.NV21, 640, 480, null)
-            yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
-            val imageBytes: ByteArray = out.toByteArray()
-            val image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            val width: Int = image.width
-            val height: Int = image.height
-            val matrix = Matrix()
-            matrix.postRotate((-90).toFloat())
-            matrix.postScale(-1f, 1f, width / 2f, height / 2f)
-            val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
-            binding.imageView.setImageBitmap(resizedBitmap)
-        }
+    private val imageCallBack = ImageCallback { p, captureImage ->
+        Log.d("xxx", "ImageCallback ${p}")
+
+        val bitmap = captureViewModel.processDetectFace(captureImage)
+//        binding.imageView.setImageBitmap(bitmap)
     }
 
     private val gazeCallback = GazeCallback { gazeInfo ->
