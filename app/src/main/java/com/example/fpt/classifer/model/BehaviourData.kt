@@ -1,4 +1,7 @@
 package com.example.fpt.classifer.model
 
-import kotlin.reflect.full.declaredMemberProperties
 
+data class BehaviourData(
+    val emotionState: String,
+    val engagementState: String,
+)

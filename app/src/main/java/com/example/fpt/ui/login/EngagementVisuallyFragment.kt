@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import camp.visual.gazetracker.callback.*
 import com.demo.domain.domain.entities.ErrorResult
@@ -66,7 +67,12 @@ class EngagementVisuallyFragment :
     }
 
     override fun initData() {
-
+        captureViewModel.emotionResult.observe(
+            viewLifecycleOwner
+        ) {
+            binding.emotionState.text = it.emotionState
+            binding.engagementState.text = it.engagementState
+        }
     }
 
     private fun initGazeTracker() {
@@ -140,7 +146,6 @@ class EngagementVisuallyFragment :
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             binding.attentionScore.text = "${(score * 100).toInt()}%"
-            Log.d("xxx", "end ${timestampEnd}")
         }
 
         override fun onBlink(
@@ -154,17 +159,15 @@ class EngagementVisuallyFragment :
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
-            Log.d("xxx", "onDrowsiness ${timestamp}")
-
             binding.sleepyState.text = if (isDrowsiness) "yes.." else "NO!"
         }
     }
 
     private val imageCallBack = ImageCallback { p, captureImage ->
-        Log.d("xxx", "ImageCallback ${p}")
-
-        val bitmap = captureViewModel.processDetectFace(captureImage)
-//        binding.imageView.setImageBitmap(bitmap)
+        val score = gazeTrackerManager?.getAttentionScore()
+        val scoreAttention = score ?: 0f
+        val bitmap = captureViewModel.processDetectFace(captureImage, scoreAttention)
+        binding.imageView.setImageBitmap(bitmap)
     }
 
     private val gazeCallback = GazeCallback { gazeInfo ->

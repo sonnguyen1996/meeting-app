@@ -8,8 +8,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import com.demo.domain.domain.entities.BehaviourInfo
 import com.demo.domain.domain.entities.ErrorResult
+import com.demo.domain.domain.response.SessionResponse
 import com.example.fpt.classifer.ClassifierResult
 import com.example.fpt.classifer.EmotionTfLiteClassifier
+import com.example.fpt.classifer.model.BehaviourData
 import com.example.fpt.mtcnn.Box
 import com.example.fpt.mtcnn.MTCNN
 import com.google.firebase.database.DatabaseReference
@@ -49,6 +51,9 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         coroutineContext.cancel()
     }
 
+    val emotionResult: MutableLiveData<BehaviourData> =
+        MutableLiveData()
+
     val heavyTaskScope by lazy { CoroutineScope(heavyJob + Dispatchers.Main + exceptionHandler) }
 
     init {
@@ -74,10 +79,9 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         listCaptureImage.clear()
     }
 
-    fun processDetectFace(bitmap: ByteArray) : Bitmap?{
-        val captureBitmap =  convertBitmap(bitmap)
-        val processedBitmap = mtcnnDetectionAndAttributesRecognition(captureBitmap)
-        return processedBitmap
+    fun processDetectFace(bitmap: ByteArray, score: Float): Bitmap? {
+        val captureBitmap = convertBitmap(bitmap)
+        return mtcnnDetectionAndAttributesRecognition(captureBitmap, score)
     }
 
     private fun convertBitmap(bitmap: ByteArray): Bitmap {
@@ -94,7 +98,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         return Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
     }
 
-    private fun mtcnnDetectionAndAttributesRecognition(bitmap : Bitmap): Bitmap? {
+    private fun mtcnnDetectionAndAttributesRecognition(bitmap: Bitmap, score: Float): Bitmap? {
         var resizedBitmap = bitmap
         val minSize = 600.0
         val scale = min(bitmap.width, bitmap.height) / minSize
@@ -161,9 +165,14 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
                     emotionClassifierTfLite!!.getImageSizeY(),
                     false
                 )
-                val res: ClassifierResult = emotionClassifierTfLite?.classifyFrame(resultBitmap)!!
+                val emotionCategory = emotionClassifierTfLite?.classifyFrame(resultBitmap).toString()
+                val concentrationIndex =  mappingEngagement(emotionCategory)
+//                val engagementLevel = getEngamentState()
+                Log.d("xxx",emotionCategory)
+                val detectResult = BehaviourData(emotionState = emotionCategory, engagementState ="100.0")
+                emotionResult.postValue(detectResult)
                 c.drawText(
-                    res.toString(),
+                    emotionCategory,
                     max(0, bbox.left).toFloat(),
                     max(0, bbox.top - 20).toFloat(),
                     p_text
@@ -174,15 +183,32 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
 
-
-    private fun processFace(faces: List<Face>) {
-
-        Log.d("xxx", faces.size.toString())
-
-        for (face in faces) {
-            Log.d("xxx", face.boundingBox.flattenToString())
-            Log.d("xxx", face.boundingBox.toString())
-
+    private fun mappingEngagement(emotion: String): Double {
+        return when (emotion) {
+            "Anger" -> {
+                0.25
+            }
+            "Disgust" -> {
+                0.2
+            }
+            "Fear" -> {
+                0.3
+            }
+            "Happiness" -> {
+                0.6
+            }
+            "Neutral" -> {
+                0.9
+            }
+            "Sadness" -> {
+                0.3
+            }
+            "Surprise" -> {
+                0.6
+            }
+            else -> {
+                0.0
+            }
         }
     }
 

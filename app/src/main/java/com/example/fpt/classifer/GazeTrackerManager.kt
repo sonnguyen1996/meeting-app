@@ -71,6 +71,7 @@ class GazeTrackerManager private constructor(context: Context) {
         isInitWithUserOption = false
         initializeState = SeeSoInitializeState.default
     }
+    fun getAttentionScore() = gazeTracker?.attentionScore
 
     fun setGazeTrackerCallbacks(vararg callbacks: GazeTrackerCallback?) {
         for (callback in callbacks) {

@@ -99,7 +99,7 @@ abstract class TfLiteClassifier(context: Context?, model_path: String?) {
 
     protected abstract fun getResults(outputs: Array<Array<FloatArray?>>?): ClassifierResult?
 
-     fun getImageSizeX() = imageSizeX
+    fun getImageSizeX() = imageSizeX
 
      fun getImageSizeY() = imageSizeY
 

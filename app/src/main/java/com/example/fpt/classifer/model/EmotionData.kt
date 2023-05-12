@@ -19,19 +19,18 @@ class EmotionData(emotionScores: FloatArray) : ClassifierResult, Serializable {
     companion object {
         private val emotions =
             arrayOf("", "Anger", "Disgust", "Fear", "Happiness", "Neutral", "Sadness", "Surprise")
-
         fun getEmotion(emotionScores: FloatArray?): String {
             var bestInd = -1
+            var maxEmotionScore = 0f
             if (emotionScores != null) {
-                var maxScore = 0f
                 for (i in emotionScores.indices) {
-                    if (maxScore < emotionScores[i]) {
-                        maxScore = emotionScores[i]
+                    if (maxEmotionScore < emotionScores[i]) {
+                        maxEmotionScore = emotionScores[i]
                         bestInd = i
                     }
                 }
             }
-            return emotions[bestInd + 1]
+            return "${emotions[bestInd + 1]}#$maxEmotionScore"
         }
     }
 }

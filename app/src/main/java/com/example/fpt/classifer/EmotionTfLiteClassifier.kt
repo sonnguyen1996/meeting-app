@@ -17,7 +17,6 @@ class EmotionTfLiteClassifier(context: Context?) : TfLiteClassifier(context, MOD
     }
 
 
-
     companion object {
         private const val TAG = "EmotionTfLite"
         private const val MODEL_FILE = "emotions_mobilenet.tflite"
