@@ -165,14 +165,22 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
                     emotionClassifierTfLite!!.getImageSizeY(),
                     false
                 )
-                val emotionCategory = emotionClassifierTfLite?.classifyFrame(resultBitmap).toString()
-                val concentrationIndex =  mappingEngagement(emotionCategory)
-//                val engagementLevel = getEngamentState()
-                Log.d("xxx",emotionCategory)
-                val detectResult = BehaviourData(emotionState = emotionCategory, engagementState ="100.0")
+                val emotionCategory =
+                    emotionClassifierTfLite?.classifyFrame(resultBitmap).toString().split("#")
+                val emotionType = emotionCategory.first()
+                val emotionPercent = emotionCategory.last()
+                val emotionWeight = mappingEngagement(emotionType)
+                val engagementValue = (emotionWeight * emotionPercent.toFloat())
+                val engagementState = convertEngagementLevel(engagementValue)
+                val detectResult = BehaviourData(
+                    emotionState = emotionType,
+                    engagementState = engagementState,
+                    emotionPercent = (emotionPercent.toDouble() * 100),
+                    engagementValue = engagementValue
+                )
                 emotionResult.postValue(detectResult)
                 c.drawText(
-                    emotionCategory,
+                    emotionType,
                     max(0, bbox.left).toFloat(),
                     max(0, bbox.top - 20).toFloat(),
                     p_text
@@ -209,6 +217,16 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
             else -> {
                 0.0
             }
+        }
+    }
+
+    private fun convertEngagementLevel(emotion: Double): String {
+        return if (emotion >= 0.5) {
+            return "High Engagement"
+        } else if (0.2 < emotion && emotion < 0.5) {
+            return "Normally Engagement"
+        } else {
+            return "Distracted"
         }
     }
 

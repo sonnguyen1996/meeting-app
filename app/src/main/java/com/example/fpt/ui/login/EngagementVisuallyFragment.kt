@@ -70,8 +70,9 @@ class EngagementVisuallyFragment :
         captureViewModel.emotionResult.observe(
             viewLifecycleOwner
         ) {
-            binding.emotionState.text = it.emotionState
-            binding.engagementState.text = it.engagementState
+            binding.emotionState.text =
+                "${it.emotionState}(${String.format("%.2f", it.emotionPercent)}%)"
+            binding.engagementState.text = "${it.engagementState}"
         }
     }
 
