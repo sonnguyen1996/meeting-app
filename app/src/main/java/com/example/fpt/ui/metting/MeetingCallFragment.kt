@@ -15,7 +15,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.activityViewModels
-import camp.visual.gazetracker.callback.CalibrationCallback
 import camp.visual.gazetracker.callback.ImageCallback
 import camp.visual.gazetracker.callback.InitializationCallback
 import camp.visual.gazetracker.callback.UserStatusCallback
@@ -26,22 +25,22 @@ import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentMeetingCallBinding
 import com.example.fpt.classifer.GazeTrackerManager
 import com.example.fpt.classifer.model.ProcessingData
-import com.example.fpt.ui.base.BaseFragment
-import com.example.fpt.ui.metting.ultils.Constant
-import com.example.fpt.ui.metting.ultils.HelperClass
-import com.example.fpt.ui.metting.ultils.MeetingMenuItem
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
-import live.videosdk.rtc.android.*
 import com.example.fpt.ui.adapter.AudioDeviceListAdapter
 import com.example.fpt.ui.adapter.LeaveOptionListAdapter
 import com.example.fpt.ui.adapter.MoreOptionsListAdapter
 import com.example.fpt.ui.adapter.ParticipantViewAdapter
+import com.example.fpt.ui.base.BaseFragment
+import com.example.fpt.ui.metting.ultils.Constant
+import com.example.fpt.ui.metting.ultils.HelperClass
+import com.example.fpt.ui.metting.ultils.MeetingMenuItem
 import com.example.fpt.ui.metting.ultils.ParticipantState
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import live.videosdk.rtc.android.*
 import live.videosdk.rtc.android.lib.AppRTCAudioManager
 import live.videosdk.rtc.android.listeners.MeetingEventListener
 import live.videosdk.rtc.android.listeners.MicRequestListener
@@ -51,12 +50,11 @@ import live.videosdk.rtc.android.model.PubSubPublishOptions
 import org.json.JSONObject
 import org.webrtc.RendererCommon
 import org.webrtc.VideoTrack
-import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 import kotlin.math.roundToInt
+
 
 @AndroidEntryPoint
 class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBinding>() {
@@ -153,7 +151,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val startTime = startMeetingDate?.time ?: 0
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
-            startTracking()
             captureViewModel.startObserver(initialValue)
         }
 
@@ -258,6 +255,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     private val initializationCallback = // Note: for understanding, left as function here
         // you can change this to lambda
         InitializationCallback { gazeTracker, error ->
+            startTracking()
 
             runBlocking(Dispatchers.Main) {
                 Log.d("xxx", "${gazeTracker !== null}")
@@ -626,8 +624,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         override fun onRecordingStarted() {
             recording = true
             recordingStatusSnackbar?.dismiss()
-            binding.recordingLottie.visibility =
-                View.VISIBLE
+
             Toast.makeText(
                 context, "Recording started",
                 Toast.LENGTH_SHORT
@@ -697,9 +694,14 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             captureViewModel.listCaptureImage.add(ProcessingData(currenImage, isSleepy, (score * 100)))
             Log.d("xxx","imageCallBack :${captureViewModel.listCaptureImage.size}")
+            Log.d("xxx","currenImage :${currenImage.toString()},isSleepy$isSleepy, score: $score")
+            runBlocking(Dispatchers.Main) {
+                val result = currenImage?.let { captureViewModel.convertBitmap(it) }
+                binding.btnCopyContent.setImageBitmap(result)
 
+            }
             if(captureViewModel.listCaptureImage.size == 3){
-               val result = captureViewModel.processImage()
+                val result = captureViewModel.processImage()
                 Log.d("xxx",result.toString())
             }
         }
