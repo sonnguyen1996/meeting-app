@@ -25,6 +25,7 @@ import com.example.demothesisfpteduvn.BuildConfig
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentMeetingCallBinding
 import com.example.fpt.classifer.GazeTrackerManager
+import com.example.fpt.classifer.model.ProcessingData
 import com.example.fpt.ui.base.BaseFragment
 import com.example.fpt.ui.metting.ultils.Constant
 import com.example.fpt.ui.metting.ultils.HelperClass
@@ -91,6 +92,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     var isGazeTrackingStarting = false
 
+    var isSleepy = false
+
+    var currenImage: ByteArray? = null
+
     var gazeTrackerFPS: Int = 30
 
 
@@ -150,7 +155,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
             startTracking()
-            captureViewModel.startObserver(initialValue, meeting)
+            captureViewModel.startObserver(initialValue)
         }
 
 
@@ -238,6 +243,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         meeting?.join()
         meeting?.disableWebcam()
     }
+
     private fun initHandler() {
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
@@ -254,8 +260,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         // you can change this to lambda
         InitializationCallback { gazeTracker, error ->
 
-            runBlocking (Dispatchers.Main) {
-                Log.d("xxx","${gazeTracker !== null}")
+            runBlocking(Dispatchers.Main) {
+                Log.d("xxx", "${gazeTracker !== null}")
             }
 
         }
@@ -676,6 +682,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             showWebcamRequestDialog(listener)
         }
     }
+
     private fun startTracking() {
         backgroundHandler?.post {
             gazeTrackerManager?.startGazeTracking()
@@ -690,36 +697,22 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         override fun onCalibrationNextPoint(p0: Float, p1: Float) {
-            TODO("Not yet implemented")
         }
 
 
         override fun onCalibrationFinished(calibrationData: DoubleArray?) {
-        }
-    }
-    private val imageCallBack = ImageCallback { p, p1 ->
-        runBlocking(Dispatchers.Main) {
-            val out = ByteArrayOutputStream()
-            val yuvImage = YuvImage(p1, ImageFormat.NV21, 640, 480, null)
-            yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
-            val imageBytes: ByteArray = out.toByteArray()
-            val image = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            val width: Int = image.width
-            val height: Int = image.height
-            val matrix = Matrix()
-            matrix.postRotate((-90).toFloat())
 
-            val resizedBitmap = Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
-            captureViewModel.listCaptureImage.add(resizedBitmap)
-            counter++
-            Log.d("xxx","counter $counter vs ${ (System.currentTimeMillis() - p)/1000}")
         }
     }
-   var counter = 0;
+    private val imageCallBack = ImageCallback { p, image ->
+        currenImage = image
+    }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            captureViewModel.recentAttentionScore = (score * 100).toInt()
-            counter = 0
+            captureViewModel.listCaptureImage.add(ProcessingData(currenImage, isSleepy, (score * 100)))
+            if(captureViewModel.listCaptureImage.size == 10){
+                captureViewModel.processImage()
+            }
         }
 
         override fun onBlink(
@@ -732,10 +725,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
-            Log.d("xxx","${isDrowsiness}")
-
+            isSleepy = isDrowsiness
         }
     }
+
     private fun updatePresenter(participantId: String?) {
         if (participantId == null) {
             binding.shareView.visibility = View.GONE

@@ -1,5 +1,6 @@
 package com.example.fpt.ui.login
 
+import android.content.res.Resources
 import android.graphics.*
 import android.os.Build
 import android.os.Bundle
@@ -8,6 +9,7 @@ import android.os.HandlerThread
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.activityViewModels
 import camp.visual.gazetracker.callback.*
 import com.demo.domain.domain.entities.ErrorResult
@@ -35,6 +37,8 @@ class EngagementVisuallyFragment :
     private var gazeTrackerManager: GazeTrackerManager? = null
 
     var isGazeTrackingStarting = false
+
+    var isCaptureByInterval = false
 
     var gazeTrackerFPS: Int = 30
 
@@ -86,22 +90,24 @@ class EngagementVisuallyFragment :
     private val initializationCallback = // Note: for understanding, left as function here
         // you can change this to lambda
         InitializationCallback { _, error ->
-            Log.d("xxx", error.toString())
             runBlocking(Dispatchers.Main) {
-                binding.startCapture.revertAnimation {
-                    binding.startCapture.text = "Stop"
+                binding.startCapture.doneLoadingAnimation(R.color.md_red_400, defaultDoneImage())
+                binding.startCapture.revertAnimation{
+                    binding.startCapture.text ="Stop"
                 }
             }
             startTracking()
             updateViewState()
         }
 
+
     private fun startTracking() {
         backgroundHandler?.post {
             gazeTrackerManager?.startGazeTracking()
         }
-        isGazeTrackingStarting = true
     }
+    private fun defaultDoneImage() =
+        BitmapFactory.decodeResource(resources, R.drawable.ic_done_white_48dp)
 
     // Thread control
     private fun initHandler() {
@@ -115,8 +121,24 @@ class EngagementVisuallyFragment :
 
     override fun initActions() {
         binding.startCapture.setOnClickListener {
-            binding.startCapture.startAnimation()
-            initGazeTracker()
+            if (!isGazeTrackingStarting) {
+                isGazeTrackingStarting = true
+
+                binding.startCapture.startAnimation()
+                initGazeTracker()
+            } else {
+                binding.startCapture.doneLoadingAnimation(R.color.md_red_400, defaultDoneImage())
+                binding.startCapture.revertAnimation {
+                    binding.startCapture.text = "Start"
+                }
+                gazeTrackerManager?.stopGazeTracking()
+                isGazeTrackingStarting = false
+
+            }
+        }
+
+        binding.captureCheckbox.setOnCheckedChangeListener { buttonView, isChecked ->
+            isCaptureByInterval = isChecked
         }
     }
 
@@ -146,7 +168,17 @@ class EngagementVisuallyFragment :
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            binding.attentionScore.text = "${(score * 100).toInt()}%"
+            var attensionScore = (score * 100)
+            binding.attentionScore.text = "${attensionScore}%"
+            if (isCaptureByInterval) {
+                binding.imageView.invalidate()
+                val drawable = binding.imageView.drawable
+                val bitmap = drawable.toBitmap()
+                val processedBitmap =
+                    captureViewModel.mtcnnDetectionAndAttributesRecognition(bitmap, attensionScore)
+                binding.imageView.setImageBitmap(processedBitmap)
+
+            }
         }
 
         override fun onBlink(
@@ -165,15 +197,18 @@ class EngagementVisuallyFragment :
     }
 
     private val imageCallBack = ImageCallback { p, captureImage ->
-        val score = gazeTrackerManager?.getAttentionScore()
-        val scoreAttention = score ?: 0f
-        val bitmap = captureViewModel.processDetectFace(captureImage, scoreAttention)
-        binding.imageView.setImageBitmap(bitmap)
+        var resultBitmap: Bitmap? = if (!isCaptureByInterval) {
+            val score = gazeTrackerManager?.getAttentionScore()
+            val scoreAttention = score ?: 0f
+            captureViewModel.processDetectFace(captureImage, scoreAttention)
+        } else {
+            captureViewModel.convertBitmap(captureImage)
+        }
+        binding.imageView.setImageBitmap(resultBitmap)
     }
 
     private val gazeCallback = GazeCallback { gazeInfo ->
         if (isGazeTrackingStarting) {
-            isGazeTrackingStarting = false
             updateViewState()
         }
         if (gazeTrackerManager?.isCalibrating() == false) {

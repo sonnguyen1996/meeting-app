@@ -41,6 +41,9 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
         viewModel.getJoinRoomResponse().observe(
             viewLifecycleOwner
         ) { roomResponse ->
+            binding.btnJoinMeeting.revertAnimation {
+                binding.btnJoinMeeting.text = "Stop"
+            }
             val roomBundle = Bundle()
             val meetingInfo = MeetingInfo()
             meetingInfo.meetingId = roomResponse.roomId
@@ -63,6 +66,7 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
         binding.btnWebcam.setOnClickListener { toggleWebcam() }
 
         binding.btnJoinMeeting.setOnClickListener {
+            binding.btnJoinMeeting.startAnimation()
             val meetingId = binding.etMeetingId.text.toString().trim { it <= ' ' }
             val pattern = Regex("\\w{4}-\\w{4}-\\w{4}")
             if ("" == meetingId) {
@@ -128,7 +132,6 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
             initializationOptions
             PeerConnectionFactory.initialize(initializationOptions)
             peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory()
-//            binding.joiningView.setMirror(true)
             val surfaceTextureHelper =
                 SurfaceTextureHelper.create("CaptureThread", PeerConnectionUtils.getEglContext())
 
@@ -178,15 +181,15 @@ class CreateMeetingFragment : BaseFragment<MeetingViewModel, FragmentCreateMeeti
     }
 
     override fun onDestroy() {
-//        binding.joiningView.removeTrack()
-//        binding.joiningView.releaseSurfaceViewRenderer()
+        binding.joiningView.removeTrack()
+        binding.joiningView.releaseSurfaceViewRenderer()
         closeCapture()
         super.onDestroy()
     }
 
     override fun onPause() {
-//        binding.joiningView.removeTrack()
-//        binding.joiningView.releaseSurfaceViewRenderer()
+        binding.joiningView.removeTrack()
+        binding.joiningView.releaseSurfaceViewRenderer()
         closeCapture()
         super.onPause()
     }

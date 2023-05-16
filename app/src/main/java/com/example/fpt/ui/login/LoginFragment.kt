@@ -29,6 +29,13 @@ class LoginFragment : BaseFragment<LoginViewModel, FragmentLoginBinding>() {
                 navigate(R.id.action_loginFragment_to_engagementVisuallyFragment)
             }, 1000)
         }
+
+        binding.cirLoginButton.setOnClickListener {
+            binding.cirLoginButton.startAnimation()
+            android.os.Handler(Looper.getMainLooper()).postDelayed({
+                navigate(R.id.action_loginFragment_to_createMeetingFragment)
+            }, 1000)
+        }
     }
 
     override fun provideViewModelClass() = LoginViewModel::class.java

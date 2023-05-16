@@ -6,18 +6,16 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import com.demo.domain.domain.entities.BehaviourInfo
+import com.demo.domain.domain.entities.BehaviourRemoteInfo
 import com.demo.domain.domain.entities.ErrorResult
-import com.demo.domain.domain.response.SessionResponse
-import com.example.fpt.classifer.ClassifierResult
 import com.example.fpt.classifer.EmotionTfLiteClassifier
 import com.example.fpt.classifer.model.BehaviourData
+import com.example.fpt.classifer.model.ProcessingData
 import com.example.fpt.mtcnn.Box
 import com.example.fpt.mtcnn.MTCNN
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
-import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetector
 import kotlinx.coroutines.*
 import live.videosdk.rtc.android.Meeting
@@ -31,7 +29,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
 
     var detector: FaceDetector? = null
 
-    var listCaptureImage = mutableListOf<Bitmap>()
+    var listCaptureImage = mutableListOf<ProcessingData>()
 
     private var database: DatabaseReference
 
@@ -57,34 +55,40 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
     val heavyTaskScope by lazy { CoroutineScope(heavyJob + Dispatchers.Main + exceptionHandler) }
 
     init {
-//        val options = FaceDetectorOptions.Builder()
-//            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-//            .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
-//            .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
-//            .setMinFaceSize(0.15f)
-//            .enableTracking()
-//            .build()
-//        detector = FaceDetection.getClient(options)
         mtcnnFaceDetector = MTCNN(context = application.baseContext)
         emotionClassifierTfLite = EmotionTfLiteClassifier(application.baseContext)
 
         database = Firebase.database.reference
     }
 
-    fun processImage() {
-        val processList = listCaptureImage.takeLast(10)
-        processList.forEach { captureImage ->
-//            mtcnnDetectionAndAttributesRecognition(captureImage)
+    fun processImage(): BehaviourRemoteInfo {
+        val sleepyPercent = (listCaptureImage.filter { it.isSleepy }
+            .map { it.isSleepy }.size / listCaptureImage.size) * 100
+        val attentionScore = listCaptureImage.map { it.attentionScore }.average()
+        var engagementState = "Undefined"
+
+        if (attentionScore >= 50) {
+            val processingList =
+                listCaptureImage.map { it.imageCapture?.let { it1 -> detectEmotionRealTime(it1) } }
+            val ciScore =  processingList.map { it!!.engagementValue }.average()
+            engagementState = convertEngagementLevel(ciScore)
         }
+
         listCaptureImage.clear()
+        return BehaviourRemoteInfo(
+            isSleep = sleepyPercent >= 50,
+            isFocus = attentionScore >= 50,
+            emotion = "",
+            engagementState = engagementState
+        )
     }
 
-    fun processDetectFace(bitmap: ByteArray, score: Float): Bitmap? {
+    fun processDetectFace(bitmap: ByteArray): Bitmap? {
         val captureBitmap = convertBitmap(bitmap)
-        return mtcnnDetectionAndAttributesRecognition(captureBitmap, score)
+        return mtcnnDetectionAndAttributesRecognition(captureBitmap)
     }
 
-    private fun convertBitmap(bitmap: ByteArray): Bitmap {
+    fun convertBitmap(bitmap: ByteArray): Bitmap {
         val out = ByteArrayOutputStream()
         val yuvImage = YuvImage(bitmap, ImageFormat.NV21, 640, 480, null)
         yuvImage.compressToJpeg(Rect(0, 0, 640, 480), 100, out)
@@ -98,7 +102,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         return Bitmap.createBitmap(image, 0, 0, width, height, matrix, true)
     }
 
-    private fun mtcnnDetectionAndAttributesRecognition(bitmap: Bitmap, score: Float): Bitmap? {
+    fun mtcnnDetectionAndAttributesRecognition(bitmap: Bitmap): Bitmap? {
         var resizedBitmap = bitmap
         val minSize = 600.0
         val scale = min(bitmap.width, bitmap.height) / minSize
@@ -190,6 +194,72 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         return tempBmp
     }
 
+    fun detectEmotionRealTime(bitmap: ByteArray): BehaviourData? {
+        val captureBitmap = convertBitmap(bitmap)
+        var resizedBitmap = captureBitmap
+        val minSize = 600.0
+        val scale = min(captureBitmap.width, captureBitmap.height) / minSize
+        if (scale > 1.0) {
+            resizedBitmap = Bitmap.createScaledBitmap(
+                captureBitmap,
+                (captureBitmap.width / scale).toInt(),
+                (captureBitmap.height / scale).toInt(),
+                false
+            )
+        }
+
+        val startTime = SystemClock.uptimeMillis()
+        val bboxes: Vector<Box> = mtcnnFaceDetector!!.detectFaces(
+            resizedBitmap,
+            minFaceSize
+        )
+
+        Log.i(
+            "xxx",
+            "Timecost to run mtcnn: " + (SystemClock.uptimeMillis() - startTime).toString()
+        )
+        for (box in bboxes) {
+            val bbox: Rect =
+                box.transform2Rect()
+            if (emotionClassifierTfLite != null && bbox.width() > 0 && bbox.height() > 0) {
+                val w = captureBitmap.width
+                val h = captureBitmap.height
+                val bboxOrig = Rect(
+                    max(0, w * bbox.left / resizedBitmap.width),
+                    max(0, h * bbox.top / resizedBitmap.height),
+                    min(w, w * bbox.right / resizedBitmap.width),
+                    min(h, h * bbox.bottom / resizedBitmap.height)
+                )
+                val faceBitmap = Bitmap.createBitmap(
+                    captureBitmap,
+                    bboxOrig.left,
+                    bboxOrig.top,
+                    bboxOrig.width(),
+                    bboxOrig.height()
+                )
+                val resultBitmap = Bitmap.createScaledBitmap(
+                    faceBitmap,
+                    emotionClassifierTfLite!!.getImageSizeX(),
+                    emotionClassifierTfLite!!.getImageSizeY(),
+                    false
+                )
+                val emotionCategory =
+                    emotionClassifierTfLite?.classifyFrame(resultBitmap).toString().split("#")
+                val emotionType = emotionCategory.first()
+                val emotionPercent = emotionCategory.last()
+                val emotionWeight = mappingEngagement(emotionType)
+                val engagementValue = (emotionWeight * emotionPercent.toFloat())
+                val engagementState = convertEngagementLevel(engagementValue)
+                return BehaviourData(
+                    emotionState = emotionType,
+                    engagementState = engagementState,
+                    emotionPercent = (emotionPercent.toDouble() * 100),
+                    engagementValue = engagementValue
+                )
+            }
+        }
+        return null
+    }
 
     private fun mappingEngagement(emotion: String): Double {
         return when (emotion) {
@@ -230,15 +300,11 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun insertSessionUser(meeting: Meeting?) {
-        val behaviourInfo = BehaviourInfo(
-            isSleep = false,
-            isLookAway = false,
-            emotion = "Unidentified"
-        )
+    private fun insertSessionUser(meeting: Meeting?, behaviourRemoteInfo: BehaviourRemoteInfo) {
+        behaviourRemoteInfo.studentId = meeting?.localParticipant?.id
         database.child("roomSession").child(meeting?.meetingId ?: "")
             .child(meeting?.localParticipant?.id ?: "")
-            .setValue(behaviourInfo)
+            .setValue(behaviourRemoteInfo)
             .addOnSuccessListener {
                 Log.d("xxx", "database addOnSuccessListener")
             }
@@ -247,16 +313,16 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
             }
     }
 
-    private fun updateValue(meeting: Meeting?, behaviourInfo: BehaviourInfo) {
-//        database.child("roomSession").child(meeting?.meetingId ?: "")
-//            .child(meeting?.localParticipant?.id ?: "")
-////            .updateChildren(behaviourInfo.toMap())
-//            .addOnSuccessListener {
-//                isCollectDone = true
-//            }
-//            .addOnFailureListener {
-//                Log.d("xxx", "database addOnFailureListener")
-//            }
+    private fun updateValue(meeting: Meeting?, behaviourRemoteInfo: BehaviourRemoteInfo) {
+        database.child("roomSession").child(meeting?.meetingId ?: "")
+            .child(meeting?.localParticipant?.id ?: "")
+            .updateChildren(behaviourRemoteInfo.toMap())
+            .addOnSuccessListener {
+
+            }
+            .addOnFailureListener {
+                Log.d("xxx", "database addOnFailureListener")
+            }
     }
 
     private var meetingSeconds = 0
@@ -267,9 +333,8 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
     val updateTimeMeeting: MutableLiveData<String> =
         MutableLiveData()
 
-    fun startObserver(initialTime: Int, meetingInfo: Meeting?) = heavyTaskScope.launch {
+    fun startObserver(initialTime: Int) = heavyTaskScope.launch {
         meetingSeconds = initialTime
-        insertSessionUser(meetingInfo)
         while (isActive) {
             val hours = meetingSeconds / 3600
             val minutes = (meetingSeconds % 3600) / 60

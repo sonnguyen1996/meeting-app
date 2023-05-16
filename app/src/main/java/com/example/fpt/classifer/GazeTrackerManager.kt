@@ -90,6 +90,7 @@ class GazeTrackerManager private constructor(context: Context) {
     }
 
     fun startGazeTracking(): Boolean {
+        gazeTracker?.setAttentionInterval(10)
         gazeTracker?.also {
             it.startTracking()
             return true
