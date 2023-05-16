@@ -66,11 +66,13 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
             .map { it.isSleepy }.size / listCaptureImage.size) * 100
         val attentionScore = listCaptureImage.map { it.attentionScore }.average()
         var engagementState = "Undefined"
+        var emotionState = "Undefined"
 
         if (attentionScore >= 50) {
             val processingList =
                 listCaptureImage.map { it.imageCapture?.let { it1 -> detectEmotionRealTime(it1) } }
             val ciScore =  processingList.map { it!!.engagementValue }.average()
+            emotionState = processingList.map { it?.emotionState }.groupingBy { it }.eachCount().maxBy { it.value }.key.toString()
             engagementState = convertEngagementLevel(ciScore)
         }
 
@@ -78,7 +80,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         return BehaviourRemoteInfo(
             isSleep = sleepyPercent >= 50,
             isFocus = attentionScore >= 50,
-            emotion = "",
+            emotion = emotionState,
             engagementState = engagementState
         )
     }

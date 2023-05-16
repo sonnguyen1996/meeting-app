@@ -21,4 +21,8 @@ data class BehaviourRemoteInfo(
             "engagementState" to engagementState,
         )
     }
+
+    override fun toString(): String {
+        return "studentId:${studentId},isSleep :$isSleep,isFocus: $isFocus,emotion:$emotion,engagementState:$engagementState"
+    }
 }

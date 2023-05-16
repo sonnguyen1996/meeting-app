@@ -133,7 +133,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
         initHandler()
         gazeTrackerManager?.setGazeTrackerCallbacks(
-            calibrationCallback,
             userStatusCallback,
             imageCallBack
         )
@@ -690,28 +689,18 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         isGazeTrackingStarting = true
     }
 
-
-    private val calibrationCallback = object : CalibrationCallback {
-        override fun onCalibrationProgress(progress: Float) {
-
-        }
-
-        override fun onCalibrationNextPoint(p0: Float, p1: Float) {
-        }
-
-
-        override fun onCalibrationFinished(calibrationData: DoubleArray?) {
-
-        }
-    }
     private val imageCallBack = ImageCallback { p, image ->
+
         currenImage = image
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             captureViewModel.listCaptureImage.add(ProcessingData(currenImage, isSleepy, (score * 100)))
-            if(captureViewModel.listCaptureImage.size == 10){
-                captureViewModel.processImage()
+            Log.d("xxx","imageCallBack :${captureViewModel.listCaptureImage.size}")
+
+            if(captureViewModel.listCaptureImage.size == 3){
+               val result = captureViewModel.processImage()
+                Log.d("xxx",result.toString())
             }
         }
 

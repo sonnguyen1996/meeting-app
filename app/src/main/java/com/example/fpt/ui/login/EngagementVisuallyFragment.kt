@@ -175,7 +175,7 @@ class EngagementVisuallyFragment :
                 val drawable = binding.imageView.drawable
                 val bitmap = drawable.toBitmap()
                 val processedBitmap =
-                    captureViewModel.mtcnnDetectionAndAttributesRecognition(bitmap, attensionScore)
+                    captureViewModel.mtcnnDetectionAndAttributesRecognition(bitmap)
                 binding.imageView.setImageBitmap(processedBitmap)
 
             }
@@ -198,9 +198,7 @@ class EngagementVisuallyFragment :
 
     private val imageCallBack = ImageCallback { p, captureImage ->
         var resultBitmap: Bitmap? = if (!isCaptureByInterval) {
-            val score = gazeTrackerManager?.getAttentionScore()
-            val scoreAttention = score ?: 0f
-            captureViewModel.processDetectFace(captureImage, scoreAttention)
+            captureViewModel.processDetectFace(captureImage)
         } else {
             captureViewModel.convertBitmap(captureImage)
         }
