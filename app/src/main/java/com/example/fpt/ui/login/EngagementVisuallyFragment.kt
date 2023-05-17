@@ -1,17 +1,14 @@
 package com.example.fpt.ui.login
 
-import android.content.res.Resources
 import android.graphics.*
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.activityViewModels
 import camp.visual.gazetracker.callback.*
+import com.demo.domain.domain.entities.BehaviourRemoteInfo
 import com.demo.domain.domain.entities.ErrorResult
 import com.example.demothesisfpteduvn.R
 import com.example.demothesisfpteduvn.databinding.FragmentEngagementVisuallyBinding
@@ -35,6 +32,8 @@ class EngagementVisuallyFragment :
     var isGazeTrackingStarting = false
 
     var isCaptureByInterval = false
+
+    var isSleepy = false
 
     var gazeTrackerFPS: Int = 30
 
@@ -71,8 +70,17 @@ class EngagementVisuallyFragment :
             viewLifecycleOwner
         ) {
             binding.emotionState.text =
-                "${it.emotionState}(${String.format("%.2f", it.emotionPercent)}%)"
+                "${it.emotionState}(${String.format("%.2f", it.emotionPercent)})%"
             binding.engagementState.text = "${it.engagementState}"
+            captureViewModel.updateRealtimeDatabase(
+                "test", "roomID", behaviourRemoteInfo = BehaviourRemoteInfo(
+                    studentId = "test",
+                    isSleep = isSleepy,
+                    isFocus = gazeTrackerManager?.getAttentionScore()!! >= 50,
+                    emotion = "${it.emotionState}",
+                    engagementState = "${it.engagementState}"
+                )
+            )
         }
     }
 
@@ -88,8 +96,8 @@ class EngagementVisuallyFragment :
         InitializationCallback { _, error ->
             runBlocking(Dispatchers.Main) {
                 binding.startCapture.doneLoadingAnimation(R.color.md_red_400, defaultDoneImage())
-                binding.startCapture.revertAnimation{
-                    binding.startCapture.text ="Stop"
+                binding.startCapture.revertAnimation {
+                    binding.startCapture.text = "Stop"
                 }
             }
             startTracking()
@@ -102,6 +110,7 @@ class EngagementVisuallyFragment :
             gazeTrackerManager?.startGazeTracking()
         }
     }
+
     private fun defaultDoneImage() =
         BitmapFactory.decodeResource(resources, R.drawable.ic_done_white_48dp)
 
@@ -144,10 +153,9 @@ class EngagementVisuallyFragment :
             pivotX = (width / 2).toFloat()
             pivotY = (height / 2).toFloat()
         }
-
-        binding.attentionScore.text = ""
-        binding.blinkState.text = ""
-        binding.sleepyState.text = ""
+        if (isCaptureByInterval) {
+            binding.captureImage.visibility = View.VISIBLE
+        }
     }
 
     private val calibrationCallback = object : CalibrationCallback {
@@ -164,15 +172,15 @@ class EngagementVisuallyFragment :
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            var attensionScore = (score * 100)
-            binding.attentionScore.text = "${attensionScore}%"
+            val attensionScore = (score * 100)
+            binding.attentionScore.text = "${String.format("%.2f", attensionScore)}%"
             if (isCaptureByInterval) {
                 binding.imageView.invalidate()
                 val drawable = binding.imageView.drawable
                 val bitmap = drawable.toBitmap()
                 val processedBitmap =
                     captureViewModel.mtcnnDetectionAndAttributesRecognition(bitmap)
-                binding.imageView.setImageBitmap(processedBitmap)
+                binding.captureImage.setImageBitmap(processedBitmap)
 
             }
         }

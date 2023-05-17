@@ -31,7 +31,15 @@
                         android:layout_height="350dp"
                         android:scaleType="fitCenter"
                         android:src="@drawable/ic_launcher_background" />
-
+                    <ImageView
+                        android:id="@+id/captureImage"
+                        android:layout_width="150dp"
+                        android:layout_height="150dp"
+                        android:visibility="gone"
+                        android:layout_gravity="end"
+                        android:scaleType="fitCenter"
+                        android:layout_marginEnd="30dp"
+                        android:src="@drawable/ic_launcher_background" />
                 </androidx.cardview.widget.CardView>
 
                 <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
@@ -90,7 +98,7 @@
 
                     <TextView
                         android:id="@+id/attention_score"
-                        android:layout_width="0dp"
+                        android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:gravity="end"
                         android:text="30%"

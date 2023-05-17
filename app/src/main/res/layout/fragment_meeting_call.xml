@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <LinearLayout
+    <LinearLayout xmlns:tools="http://schemas.android.com/tools"
         android:id="@+id/mainLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -15,7 +14,7 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/material_toolbar"
             android:layout_width="match_parent"
-            android:layout_height="500dp"
+            android:layout_height="?attr/actionBarSize"
             android:background="@color/transparentColor"
             app:titleTextColor="@color/white"
             app:contentInsetStart="0dp">
@@ -57,10 +56,10 @@
                         android:textSize="16sp" />
 
                     <ImageButton
-                        android:id="@+id/btnCopyContent"
-                        android:layout_width="288dp"
-                        android:layout_height="match_parent"
                         android:layout_marginLeft="7dp"
+                        android:id="@+id/btnCopyContent"
+                        android:layout_width="22dp"
+                        android:layout_height="22sp"
                         android:layout_toRightOf="@+id/txtMeetingId"
                         android:backgroundTint="@color/transparentColor"
                         android:src="@drawable/ic_outline_content_copy_24" />
@@ -103,7 +102,6 @@
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:visibility="gone"
             android:layout_weight="1">
 
             <LinearLayout
@@ -213,7 +211,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:visibility="gone"
                     android:orientation="vertical">
 
                     <LinearLayout
@@ -226,7 +223,7 @@
                         <androidx.viewpager2.widget.ViewPager2
                             android:id="@+id/view_pager_video_grid"
                             android:layout_width="match_parent"
-                            android:layout_height="200dp"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:animateLayoutChanges="false" />
 

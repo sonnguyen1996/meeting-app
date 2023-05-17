@@ -27,13 +27,9 @@ import kotlin.math.min
 
 class CapturingViewModel(application: Application) : AndroidViewModel(application) {
 
-    var detector: FaceDetector? = null
-
     var listCaptureImage = mutableListOf<ProcessingData>()
 
     private var database: DatabaseReference
-
-    var recentAttentionScore: Int = 0
 
     private var emotionClassifierTfLite: EmotionTfLiteClassifier? = null
 
@@ -66,20 +62,16 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
             .map { it.isSleepy }.size / listCaptureImage.size) * 100
         val attentionScore = listCaptureImage.map { it.attentionScore }.average()
         var engagementState = "Undefined"
-        Log.d("xxx", "attentionScore:${attentionScore}")
         var emotionState = "Undefined"
         if (attentionScore >= 50) {
             val processingList =
                 listCaptureImage.map { it.imageCapture?.let { it1 -> detectEmotionRealTime(it1) } }
                     .toMutableList()
             processingList.removeIf { it == null }
-            Log.d("xxx", "processingList:${processingList}")
-
             if (processingList.isNotEmpty()) {
                 val ciScore = processingList.map { it!!.engagementValue }.average()
                 emotionState = processingList.map { it?.emotionState }.groupingBy { it }.eachCount()
                     .maxBy { it.value }.key.toString()
-
                 engagementState = convertEngagementLevel(ciScore)
             }
         }
@@ -310,12 +302,17 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun insertSessionUser(meeting: Meeting?, behaviourRemoteInfo: BehaviourRemoteInfo) {
-        behaviourRemoteInfo.studentId = meeting?.localParticipant?.id
-        database.child("roomSession").child(meeting?.meetingId ?: "")
-            .child(meeting?.localParticipant?.id ?: "")
+    fun insertSessionUser(
+        studentID: String,
+        meetingID: String,
+        behaviourRemoteInfo: BehaviourRemoteInfo
+    ) {
+        behaviourRemoteInfo.studentId = studentID
+        database.child("roomSession").child(meetingID)
+            .child(studentID)
             .setValue(behaviourRemoteInfo)
             .addOnSuccessListener {
+                listCaptureImage.clear()
                 Log.d("xxx", "database addOnSuccessListener")
             }
             .addOnFailureListener {
@@ -323,12 +320,17 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
             }
     }
 
-    private fun updateValue(meeting: Meeting?, behaviourRemoteInfo: BehaviourRemoteInfo) {
-        database.child("roomSession").child(meeting?.meetingId ?: "")
-            .child(meeting?.localParticipant?.id ?: "")
+    fun updateRealtimeDatabase(
+        studentID: String,
+        meetingID: String,
+        behaviourRemoteInfo: BehaviourRemoteInfo
+    ) {
+        database.child("roomSession").child(meetingID)
+            .child(studentID)
             .updateChildren(behaviourRemoteInfo.toMap())
             .addOnSuccessListener {
-
+                listCaptureImage.clear()
+                Log.d("xxx", "database addOnSuccessListener")
             }
             .addOnFailureListener {
                 Log.d("xxx", "database addOnFailureListener")

@@ -151,6 +151,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             val startTime = startMeetingDate?.time ?: 0
             val difference = currentTime.time - startTime
             val initialValue = Math.toIntExact(TimeUnit.MILLISECONDS.toSeconds(difference))
+            startTracking()
             captureViewModel.startObserver(initialValue)
         }
 
@@ -624,7 +625,8 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         override fun onRecordingStarted() {
             recording = true
             recordingStatusSnackbar?.dismiss()
-
+            binding.recordingLottie.visibility =
+                View.VISIBLE
             Toast.makeText(
                 context, "Recording started",
                 Toast.LENGTH_SHORT
@@ -693,8 +695,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
             captureViewModel.listCaptureImage.add(ProcessingData(currenImage, isSleepy, (score * 100)))
-            Log.d("xxx","imageCallBack :${captureViewModel.listCaptureImage.size}")
-            Log.d("xxx","currenImage :${currenImage.toString()},isSleepy$isSleepy, score: $score")
             runBlocking(Dispatchers.Main) {
                 val result = currenImage?.let { captureViewModel.convertBitmap(it) }
                 binding.btnCopyContent.setImageBitmap(result)
