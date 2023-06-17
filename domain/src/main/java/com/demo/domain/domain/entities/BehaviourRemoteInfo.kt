@@ -9,7 +9,9 @@ data class BehaviourRemoteInfo(
     val isSleep: Boolean? = false,
     val isFocus: Boolean? = false,
     val emotion: String? = null,
-    val engagementState: String? = null
+    val engagementState: String? = null,
+    val timeStamp: String? = null
+
 ) {
     @Exclude
     fun toMap(): Map<String, Any?> {
@@ -19,10 +21,11 @@ data class BehaviourRemoteInfo(
             "isFocus" to isFocus,
             "emotion" to emotion,
             "engagementState" to engagementState,
-        )
+            "timeStamp" to timeStamp,
+            )
     }
 
     override fun toString(): String {
-        return "studentId:${studentId},isSleep :$isSleep,isFocus: $isFocus,emotion:$emotion,engagementState:$engagementState"
+        return "studentId:${studentId},isSleep :$isSleep,isFocus: $isFocus,emotion:$emotion,engagementState:$engagementState, timeStamp:$timeStamp"
     }
 }

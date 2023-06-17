@@ -379,7 +379,7 @@ class ParticipantViewFragment(
     private val normalLayoutRowCount = min(max(1, participantsView.size), 2)
     private val normalLayoutColumnCount: Int
         get() {
-            val maxColumns = 2
+            val maxColumns = 15
             val result = max(
                 1,
                 (participantsView.size + normalLayoutRowCount - 1) / normalLayoutRowCount

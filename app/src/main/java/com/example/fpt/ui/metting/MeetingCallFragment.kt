@@ -18,6 +18,7 @@ import androidx.fragment.app.activityViewModels
 import camp.visual.gazetracker.callback.ImageCallback
 import camp.visual.gazetracker.callback.InitializationCallback
 import camp.visual.gazetracker.callback.UserStatusCallback
+import com.demo.domain.domain.entities.BehaviourRemoteInfo
 import com.demo.domain.domain.entities.ErrorResult
 import com.demo.domain.domain.response.MeetingInfo
 import com.example.demothesisfpteduvn.BuildConfig
@@ -90,7 +91,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
     var isGazeTrackingStarting = false
 
-    var isSleepy = false
+    var sleepyNum = 0
 
     var currenImage: ByteArray? = null
 
@@ -351,12 +352,15 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                         0 -> {
                             raisedHand()
                         }
+
                         1 -> {
                             toggleScreenSharing()
                         }
+
                         2 -> {
                             toggleRecording()
                         }
+
                         3 -> {
                             openParticipantList()
                         }
@@ -483,6 +487,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 //                            unSubscribeTopics()
                             meeting?.leave()
                         }
+
                         1 -> {
                             binding.viewPagerVideoGrid.adapter = null
                             ParticipantState.destroy()
@@ -563,8 +568,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
                         "Bluetooth" -> audioDevice = AppRTCAudioManager.AudioDevice.BLUETOOTH
                         "Wired headset" -> audioDevice =
                             AppRTCAudioManager.AudioDevice.WIRED_HEADSET
+
                         "Speaker phone" -> audioDevice =
                             AppRTCAudioManager.AudioDevice.SPEAKER_PHONE
+
                         "Earpiece" -> audioDevice = AppRTCAudioManager.AudioDevice.EARPIECE
                     }
                     meeting?.changeMic(
@@ -694,15 +701,37 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            captureViewModel.listCaptureImage.add(ProcessingData(currenImage, isSleepy, (score * 100)))
-            runBlocking(Dispatchers.Main) {
-                val result = currenImage?.let { captureViewModel.convertBitmap(it) }
-                binding.btnCopyContent.setImageBitmap(result)
-
-            }
-            if(captureViewModel.listCaptureImage.size == 3){
+            Log.d("xxx",sleepyNum.toString())
+            captureViewModel.listCaptureImage.add(
+                ProcessingData(
+                    currenImage,
+                    (sleepyNum >= 5),
+                    (score * 100)
+                )
+            )
+            if (captureViewModel.listCaptureImage.size == 2) {
+                sleepyNum = 0
                 val result = captureViewModel.processImage()
                 Log.d("xxx",result.toString())
+                val dataProcessing = BehaviourRemoteInfo(
+                    studentId = meeting?.localParticipant?.id ?: "",
+                    isSleep = result.isSleep,
+                    isFocus = result.isFocus,
+                    emotion = "${result.emotion}",
+                    engagementState = "${result.engagementState}",
+                    timeStamp = SystemClock.uptimeMillis().toString()
+                )
+                captureViewModel.updateRealtimeDatabase(
+                    meeting?.localParticipant?.id ?: "",
+                    meeting?.meetingId ?: "",
+                    behaviourRemoteInfo = dataProcessing
+                )
+
+                captureViewModel.updateStateMeeting(
+                    meeting?.localParticipant?.id ?: "",
+                    meeting?.meetingId ?: "",
+                    behaviourRemoteInfo = dataProcessing
+                )
             }
         }
 
@@ -716,7 +745,9 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
 
         override fun onDrowsiness(timestamp: Long, isDrowsiness: Boolean) {
-            isSleepy = isDrowsiness
+            if (isDrowsiness) {
+                sleepyNum += 1
+            }
         }
     }
 

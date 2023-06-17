@@ -60,6 +60,7 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
     fun processImage(): BehaviourRemoteInfo {
         val sleepyPercent = (listCaptureImage.filter { it.isSleepy }
             .map { it.isSleepy }.size / listCaptureImage.size) * 100
+        Log.d("xxx","sleepyPercent.toString() ${sleepyPercent.toString()}")
         val attentionScore = listCaptureImage.map { it.attentionScore }.average()
         var engagementState = "Undefined"
         var emotionState = "Undefined"
@@ -74,9 +75,20 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
                     .maxBy { it.value }.key.toString()
                 engagementState = convertEngagementLevel(ciScore)
             }
-        }
+        }else{
+            listCaptureImage.clear()
+            Log.d("xxx","sleepyPercent.toString() ${sleepyPercent >= 50}")
 
+            return BehaviourRemoteInfo(
+                isSleep = sleepyPercent >= 50,
+                isFocus = false,
+                emotion = emotionState,
+                engagementState = "Distracted"
+            )
+        }
         listCaptureImage.clear()
+        Log.d("xxx","sleepyPercent.toString() ${sleepyPercent >= 50}")
+
         return BehaviourRemoteInfo(
             isSleep = sleepyPercent >= 50,
             isFocus = attentionScore >= 50,
@@ -308,7 +320,9 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         behaviourRemoteInfo: BehaviourRemoteInfo
     ) {
         behaviourRemoteInfo.studentId = studentID
-        database.child("roomSession").child(meetingID)
+        database.child("meeting")
+            .child("roomSession")
+            .child(meetingID)
             .child(studentID)
             .setValue(behaviourRemoteInfo)
             .addOnSuccessListener {
@@ -325,15 +339,36 @@ class CapturingViewModel(application: Application) : AndroidViewModel(applicatio
         meetingID: String,
         behaviourRemoteInfo: BehaviourRemoteInfo
     ) {
-        database.child("roomSession").child(meetingID)
+        database.child("roomSession")
+            .child("roomInfo")
+            .child(meetingID)
             .child(studentID)
+            .child(SystemClock.uptimeMillis().toString())
             .updateChildren(behaviourRemoteInfo.toMap())
             .addOnSuccessListener {
                 listCaptureImage.clear()
+
                 Log.d("xxx", "database addOnSuccessListener")
             }
             .addOnFailureListener {
                 Log.d("xxx", "database addOnFailureListener")
+            }
+    }
+    fun updateStateMeeting(
+        studentID: String,
+        meetingID: String,
+        behaviourRemoteInfo: BehaviourRemoteInfo
+    ) {
+        database.child("roomSession")
+            .child("roomState")
+            .child(meetingID)
+            .child(studentID)
+            .updateChildren(behaviourRemoteInfo.toMap())
+            .addOnSuccessListener {
+                Log.d("xxx", "updateStateMeeting addOnSuccessListener")
+            }
+            .addOnFailureListener {
+                Log.d("xxx", "updateStateMeeting addOnFailureListener")
             }
     }
 

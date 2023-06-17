@@ -26,7 +26,7 @@ class GazeTrackerManager private constructor(context: Context) {
     private val mContext: WeakReference<Context> = WeakReference(context)
     private var gazeTracker: GazeTracker? = null
 
-    private val SEESO_LICENSE_KEY = "dev_xe8fk89zjqgjrfs84c7opru8gdtf98mmylxm1u59"
+    private val SEESO_LICENSE_KEY = "dev_4aw7zspsqxu8lo445fb511jz2ivu2kp3ffhj4z99"
 
 
     companion object {
@@ -38,7 +38,7 @@ class GazeTrackerManager private constructor(context: Context) {
             return instance
         }
     }
-
+   
     fun isTracking(): Boolean {
         return gazeTracker?.isTracking ?: false
     }

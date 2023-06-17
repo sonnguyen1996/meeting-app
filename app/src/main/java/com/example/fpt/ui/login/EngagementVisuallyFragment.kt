@@ -4,6 +4,7 @@ import android.graphics.*
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import android.view.View
 import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.activityViewModels
@@ -70,13 +71,14 @@ class EngagementVisuallyFragment :
             viewLifecycleOwner
         ) {
             binding.emotionState.text =
-                "${it.emotionState}(${String.format("%.2f", it.emotionPercent)})%"
+                "${it.emotionState}(${String.format("%.2f", it.emotionPercent)}%)"
             binding.engagementState.text = "${it.engagementState}"
+
             captureViewModel.updateRealtimeDatabase(
-                "test", "roomID", behaviourRemoteInfo = BehaviourRemoteInfo(
+                "user2", "roomID", behaviourRemoteInfo = BehaviourRemoteInfo(
                     studentId = "test",
                     isSleep = isSleepy,
-                    isFocus = gazeTrackerManager?.getAttentionScore()!! >= 50,
+                    isFocus = (gazeTrackerManager?.getAttentionScore()!! * 100) >= 50,
                     emotion = "${it.emotionState}",
                     engagementState = "${it.engagementState}"
                 )
