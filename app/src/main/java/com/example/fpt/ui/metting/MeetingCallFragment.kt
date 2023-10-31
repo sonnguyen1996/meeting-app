@@ -226,8 +226,10 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             "h720p_w960p",
             "front",
             CustomStreamTrack.VideoMode.TEXT,
-            context
+            true,
+            baseContext
         )
+
         customTracks["video"] = videoCustomTrack
 
         val audioCustomTrack = VideoSDK.createAudioTrack("high_quality", context)
@@ -235,7 +237,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
 
         meeting = VideoSDK.initMeeting(
             baseContext, meetingInfo?.meetingId, meetingInfo?.localParticipantName,
-            micEnabled, webcamEnabled, null, customTracks
+            micEnabled, webcamEnabled, null, null, true, customTracks
         )
         activity?.window?.decorView?.rootView?.let { HelperClass.showProgress(it) }
         meeting?.join()
@@ -387,7 +389,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     private fun toggleRecording() {
         if (!recording) {
             recordingStatusSnackbar?.show()
-            meeting?.startRecording(null)
         } else {
             meeting?.stopRecording()
         }
@@ -522,19 +523,6 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
         }
     }
 
-    private fun toggleWebCam() {
-        if (webcamEnabled) {
-            meeting?.disableWebcam()
-        } else {
-            val videoCustomTrack = VideoSDK.createCameraVideoTrack(
-                "h720p_w960p",
-                "front",
-                CustomStreamTrack.VideoMode.DETAIL,
-                baseContext
-            )
-            meeting?.enableWebcam(videoCustomTrack)
-        }
-    }
 
     private fun showAudioInputDialog() {
         val mics = meeting?.mics
@@ -701,7 +689,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
     }
     private val userStatusCallback = object : UserStatusCallback {
         override fun onAttention(timestampBegin: Long, timestampEnd: Long, score: Float) {
-            Log.d("xxx",sleepyNum.toString())
+            Log.d("xxx", sleepyNum.toString())
             captureViewModel.listCaptureImage.add(
                 ProcessingData(
                     currenImage,
@@ -712,7 +700,7 @@ class MeetingCallFragment : BaseFragment<MeetingViewModel, FragmentMeetingCallBi
             if (captureViewModel.listCaptureImage.size == 2) {
                 sleepyNum = 0
                 val result = captureViewModel.processImage()
-                Log.d("xxx",result.toString())
+                Log.d("xxx", result.toString())
                 val dataProcessing = BehaviourRemoteInfo(
                     studentId = meeting?.localParticipant?.id ?: "",
                     isSleep = result.isSleep,
